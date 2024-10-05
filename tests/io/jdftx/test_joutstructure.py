@@ -129,3 +129,16 @@ def test_jstructure(eslice: list[str], eknowns: dict):
     assert jst.magnetic_moments[0] == approx(eknowns["mag0"])
     assert jst.charges[-1] == approx(eknowns["ox-1"])
     assert jst.magnetic_moments[-1] == approx(eknowns["mag-1"])
+
+
+@pytest.mark.parametrize(("eslice", "eknowns"), [(ex_slice1, ex_slice1_known), (ex_slice2, ex_slice2_known)])
+def test_jstructure_site_properties(eslice: list[str], eknowns: dict):
+    jst = JOutStructure.from_text_slice(eslice, iter_type="lattice")
+    charges1 = jst.charges
+    charges2 = jst.site_properties["Lowdin Charges"]
+    moments1 = jst.magnetic_moments
+    moments2 = jst.site_properties["Lowdin Magnetic Moments"]
+    for v1, v2 in [(charges1, charges2), (moments1, moments2)]:
+        assert len(v1) == len(v2)
+        for i in range(len(v1)):
+            assert v1[i] == pytest.approx(v2[i])

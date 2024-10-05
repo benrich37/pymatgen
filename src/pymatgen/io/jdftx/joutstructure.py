@@ -67,6 +67,18 @@ class JOutStructure(Structure):
     selective_dynamics: list[int] | None = None
 
     @property
+    def structure(self) -> Structure:
+        """Return the structure.
+
+        Return the structure.
+
+        Returns
+        -------
+        structure: Structure
+        """
+        return Structure(self.lattice, self.species, self.coords, site_properties=self.site_properties)
+
+    @property
     def mu(self) -> float:
         """Return the chemical potential.
 
@@ -580,13 +592,17 @@ class JOutStructure(Structure):
             for el in charges_dict:
                 idcs = [int(i) for i in range(len(names)) if names[i] == el]
                 for i, idx in enumerate(idcs):
-                    charges[idx] += charges_dict[el][i]
+                    charge = charges_dict[el][i]
+                    charges[idx] += charge
+                    self.sites[idx].properties["Lowdin Charges"] = charge
         if len(moments_dict):
             moments = np.zeros(len(names))
             for el in moments_dict:
                 idcs = [i for i in range(len(names)) if names[i] == el]
                 for i, idx in enumerate(idcs):
-                    moments[idx] += moments_dict[el][i]
+                    moment = moments_dict[el][i]
+                    moments[idx] += moment
+                    self.sites[idx].properties["Lowdin Magnetic Moments"] = moment
         self.charges = charges
         self.magnetic_moments = moments
 
