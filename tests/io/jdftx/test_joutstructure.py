@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 from pytest import approx
 
+from pymatgen.core import Structure
 from pymatgen.core.units import Ha_to_eV, bohr_to_ang
 from pymatgen.io.jdftx.joutstructure import JOutStructure
 from pymatgen.util.testing import TEST_FILES_DIR
@@ -94,6 +95,8 @@ ex_slice2_known = {
 @pytest.mark.parametrize(("eslice", "eknowns"), [(ex_slice1, ex_slice1_known), (ex_slice2, ex_slice2_known)])
 def test_jstructure(eslice: list[str], eknowns: dict):
     jst = JOutStructure.from_text_slice(eslice, iter_type="lattice")
+    assert isinstance(jst, JOutStructure)
+    assert isinstance(jst, Structure)
     assert jst.niter == eknowns["niter"]
     assert jst.etype == eknowns["etype"]
     assert approx(eknowns["E"]) == jst.e

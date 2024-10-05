@@ -16,6 +16,7 @@ from pymatgen.io.jdftx.utils import read_outfile_slices
 if TYPE_CHECKING:
     import numpy as np
 
+    from pymatgen.core import Structure
     from pymatgen.io.jdftx.jeiters import JEiters
     from pymatgen.io.jdftx.jminsettings import (
         JMinSettingsElectronic,
@@ -663,6 +664,17 @@ class JDFTXOutfile:
     # Properties inherited from most recent JDFTXOutfileSlice directly through
     # the JDFTXOutfileSlice object's jstrucs class variable.
     ###########################################################################
+
+    @property
+    def structure(self) -> Structure:
+        """
+        Return structure from most recent JOutStructure.
+
+        Return structure from most recent JOutStructure.
+        """
+        if len(self.slices):
+            return self.slices[-1].structure
+        raise AttributeError("Property structure inaccessible due to empty jstrucs class field")
 
     @property
     def eiter_type(self) -> str:

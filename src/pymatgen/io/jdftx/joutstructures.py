@@ -14,6 +14,7 @@ from pymatgen.io.jdftx.utils import correct_geom_iter_type, get_joutstructure_st
 if TYPE_CHECKING:
     import numpy as np
 
+    from pymatgen.core.structure import Structure
     from pymatgen.io.jdftx.jeiters import JEiters
 from pymatgen.io.jdftx.joutstructure import JOutStructure
 
@@ -84,6 +85,17 @@ class JOutStructures:
     ###########################################################################
     # Properties inherited from most recent JOutStructure
     ###########################################################################
+
+    @property
+    def structure(self) -> Structure:
+        """
+        Return etype from most recent JOutStructure.
+
+        Return etype from most recent JOutStructure.
+        """
+        if len(self.slices):
+            return self.slices[-1].structure
+        raise AttributeError("Property structure inaccessible due to empty slices class field")
 
     @property
     def etype(self) -> str:
