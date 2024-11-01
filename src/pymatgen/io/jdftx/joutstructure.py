@@ -260,20 +260,20 @@ class JOutStructure(Structure):
                         break
 
         # ecomponents needs to be parsed before emin to set etype
-        instance.parse_ecomp_lines(line_collections["ecomp"]["lines"])
-        instance.parse_emin_lines(line_collections["emin"]["lines"])
+        instance.parse_ecomp_dict(line_collections["ecomp"])
+        instance.parse_emin_dict(line_collections["emin"])
         # Lattice must be parsed before posns/forces in case of direct
         # coordinates
-        instance.parse_lattice_lines(line_collections["lattice"]["lines"])
-        instance.parse_posns_lines(line_collections["posns"]["lines"])
-        instance.parse_forces_lines(line_collections["forces"]["lines"])
+        instance.parse_lattice_dict(line_collections["lattice"])
+        instance.parse_posns_dict(line_collections["posns"])
+        instance.parse_forces_dict(line_collections["forces"])
         # Strain and stress can be parsed in any order
-        instance.parse_strain_lines(line_collections["strain"]["lines"])
-        instance.parse_stress_lines(line_collections["stress"]["lines"])
+        instance.parse_strain_dict(line_collections["strain"])
+        instance.parse_stress_dict(line_collections["stress"])
         # Lowdin must be parsed after posns
-        instance.parse_lowdin_lines(line_collections["lowdin"]["lines"])
+        instance.parse_lowdin_dict(line_collections["lowdin"])
         # Opt line must be parsed after ecomp
-        instance.parse_opt_lines(line_collections["opt"]["lines"])
+        instance.parse_opt_dict(line_collections["opt"])
 
         # In case of single-point calculation
         if instance.e is None:
@@ -408,7 +408,7 @@ class JOutStructure(Structure):
                     data"
             )
 
-    def parse_emin_lines(self, emin_lines: list[str]) -> None:
+    def parse_emin_dict(self, emin_dict: dict) -> None:
         """Parse electronic minimization lines.
 
         Parse the lines of text corresponding to the electronic minimization
@@ -420,12 +420,13 @@ class JOutStructure(Structure):
             A list of lines of text from a JDFTx out file containing the
             electronic minimization data
         """
+        emin_lines: list[str] = emin_dict["lines"]
         if len(emin_lines):
             if self.etype is None:
                 self.set_etype_from_emin_lines(emin_lines)
             self.elecmindata = JElSteps.from_text_slice(emin_lines, iter_type=self.eiter_type, etype=self.etype)
 
-    def parse_lattice_lines(self, lattice_lines: list[str]) -> None:
+    def parse_lattice_dict(self, lattice_dict: dict) -> None:
         """Parse lattice lines.
 
         Parse the lines of text corresponding to the lattice vectors of a
@@ -440,12 +441,13 @@ class JOutStructure(Structure):
             lattice vectors
         """
         r = None
+        lattice_lines: list[str] = lattice_dict["lines"]
         if len(lattice_lines):
             r = _brkt_list_of_3x3_to_nparray(lattice_lines, i_start=2)
             r = r.T * bohr_to_ang
             self.lattice = Lattice(r)
 
-    def parse_strain_lines(self, strain_lines: list[str]) -> None:
+    def parse_strain_dict(self, strain_dict: dict) -> None:
         """Parse strain lines.
 
         Parse the lines of text corresponding to the strain tensor of a
@@ -460,12 +462,13 @@ class JOutStructure(Structure):
         # TODO: Strain is a unitless quantity, so column to row-major conversion
         # should cover all unit conversion. Double check if this is true.
         st = None
+        strain_lines: list[str] = strain_dict["lines"]
         if len(strain_lines):
             st = _brkt_list_of_3x3_to_nparray(strain_lines, i_start=1)
             st = st.T
         self.strain = st
 
-    def parse_stress_lines(self, stress_lines: list[str]) -> None:
+    def parse_stress_dict(self, stress_dict: dict) -> None:
         """Parse stress lines.
 
         Parse the lines of text corresponding to the stress tensor of a
@@ -480,13 +483,14 @@ class JOutStructure(Structure):
         # TODO: Lattice optimizations dump stress in cartesian coordinates in units
         # "[Eh/a0^3]" (Hartree per bohr cubed). Check if this changes for direct
         # coordinates before writing in proper unit conversion to eV/A^3.
+        stress_lines: list[str] = stress_dict["lines"]
         st = None
         if len(stress_lines):
             st = _brkt_list_of_3x3_to_nparray(stress_lines, i_start=1)
             st = st.T
         self.stress = st
 
-    def parse_posns_lines(self, posns_lines: list[str]) -> None:
+    def parse_posns_dict(self, posns_dict: dict) -> None:
         """Parse positions lines.
 
         Parse the lines of text corresponding to the positions of a
@@ -502,6 +506,7 @@ class JOutStructure(Structure):
             and sd is a flag indicating whether the ion is excluded from optimization (1)
              or not (0).
         """
+        posns_lines: list[str] = posns_dict["lines"]
         # One line for each atom + 1 header line
         natoms = len(posns_lines) - 1
         # "Cartesian coordinates" or "Direct coordinates"
@@ -532,7 +537,7 @@ class JOutStructure(Structure):
             self.append(species=names[i], coords=posns[i], coords_are_cartesian=True)
         self.selective_dynamics = selective_dynamics
 
-    def parse_forces_lines(self, forces_lines: list[str]) -> None:
+    def parse_forces_dict(self, forces_dict: dict) -> None:
         """Parse forces lines.
 
         Parse the lines of text corresponding to the forces of a
@@ -543,10 +548,11 @@ class JOutStructure(Structure):
         forces_lines: list[str]
             A list of lines of text from a JDFTx out file containing the forces
         """
+        forces_lines: list[str] = forces_dict["lines"]
+        forces = []
         natoms = len(forces_lines) - 1
         coords_type = forces_lines[0].split("Forces in")[1]
         coords_type = coords_type.strip().split()[0].strip()
-        forces = []
         for i in range(natoms):
             line = forces_lines[i + 1]
             force = np.array([float(x.strip()) for x in line.split()[2:5]])
@@ -560,7 +566,7 @@ class JOutStructure(Structure):
         forces *= Ha_to_eV
         self.forces = forces
 
-    def parse_ecomp_lines(self, ecomp_lines: list[str]) -> None:
+    def parse_ecomp_dict(self, ecomp_dict: dict) -> None:
         """Parse energy component lines.
 
         Parse the lines of text corresponding to the energy components of a
@@ -574,6 +580,7 @@ class JOutStructure(Structure):
             "component = value" where component is the name of the energy component
             and value is the value of the energy component in Hartrees.
         """
+        ecomp_lines: list[str] = ecomp_dict["lines"]
         self.ecomponents = {}
         key = None
         for line in ecomp_lines:
@@ -585,7 +592,7 @@ class JOutStructure(Structure):
         if key is not None and (self.etype is None) and (key in ["F", "G"]):
             self.etype = key
 
-    def parse_lowdin_lines(self, lowdin_lines: list[str]) -> None:
+    def parse_lowdin_dict(self, lowdin_dict: dict) -> None:
         """Parse Lowdin lines.
 
         Parse the lines of text corresponding to a Lowdin population analysis
@@ -596,6 +603,7 @@ class JOutStructure(Structure):
         lowdin_lines: list[str]
             A list of lines of text from a JDFTx out file
         """
+        lowdin_lines: list[str] = lowdin_dict["lines"]
         charges_dict: dict[str, list[float]] = {}
         moments_dict: dict[str, list[float]] = {}
         for line in lowdin_lines:
@@ -621,7 +629,7 @@ class JOutStructure(Structure):
         self.charges = charges
         self.magnetic_moments = moments
 
-    def parse_lowdin_line(self, lowdin_line: str, lowdin_dict: dict[str, list[float]]) -> dict[str, list[float]]:
+    def parse_lowdin_line(self, lowdin_line: str, lowdin_type_dict: dict[str, list[float]]) -> dict[str, list[float]]:
         """Parse Lowdin line.
 
         Parse a line of text from a JDFTx out file corresponding to a
@@ -631,7 +639,7 @@ class JOutStructure(Structure):
         ----------
         lowdin_line: str
             A line of text from a JDFTx out file
-        lowdin_dict: dict[str, list[float]]
+        lowdin_type_dict: dict[str, list[float]]
             A dictionary of Lowdin population analysis data
 
         Returns
@@ -642,8 +650,8 @@ class JOutStructure(Structure):
         tokens = [v.strip() for v in lowdin_line.strip().split()]
         name = tokens[2]
         vals = [float(x) for x in tokens[3:]]
-        lowdin_dict[name] = vals
-        return lowdin_dict
+        lowdin_type_dict[name] = vals
+        return lowdin_type_dict
 
     def is_opt_conv_line(self, line_text: str) -> bool:
         """Return True if line_text is geom opt convergence line.
@@ -662,7 +670,7 @@ class JOutStructure(Structure):
         """
         return f"{self.iter_type}: Converged" in line_text
 
-    def parse_opt_lines(self, opt_lines: list[str]) -> None:
+    def parse_opt_dict(self, opt_dict: dict) -> None:
         """Parse optimization lines.
 
         Parse the lines of text corresponding to the optimization step of a
@@ -673,6 +681,7 @@ class JOutStructure(Structure):
         opt_lines: list[str]
             A list of lines of text from a JDFTx out file
         """
+        opt_lines: list[str] = opt_dict["lines"]
         if len(opt_lines):
             for line in opt_lines:
                 if self.is_opt_start_line(line):
