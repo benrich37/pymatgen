@@ -211,6 +211,7 @@ class JOutStructure(Structure):
         eiter_type: str = "ElecMinimize",
         iter_type: str = "IonicMinimize",
         emin_flag: str = "---- Electronic minimization -------",
+        init_structure: Structure | None = None,
     ) -> JOutStructure:
         """Return JOutStructure object.
 
@@ -231,6 +232,7 @@ class JOutStructure(Structure):
             optimization step
         """
         instance = cls(lattice=np.eye(3), species=[], coords=[], site_properties={})
+        instance.init_structure = init_structure
         if iter_type not in ["IonicMinimize", "LatticeMinimize"]:
             iter_type = correct_geom_iter_type(iter_type)
         instance.eiter_type = eiter_type
