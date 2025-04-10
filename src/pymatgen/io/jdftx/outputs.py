@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from monty.dev import deprecated
+from monty.dev import deprecated
 
 from pymatgen.io.jdftx._output_utils import (
     _get_nbands_from_bandfile_filepath,

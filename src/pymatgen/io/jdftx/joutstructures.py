@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING, Any
 
 from monty.dev import deprecated
 
+from monty.dev import deprecated
+
 if TYPE_CHECKING:
     import numpy as np
 

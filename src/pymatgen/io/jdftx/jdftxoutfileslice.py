@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 import numpy as np
 from monty.dev import deprecated
+from monty.dev import deprecated
 
 if TYPE_CHECKING:
     from pymatgen.io.jdftx.jelstep import JElSteps
@@ -59,7 +60,6 @@ _jofs_atr_from_jstrucs = (
     "elec_grad_k",
     "elec_alpha",
     "elec_linmin",
-    "t_s",
 )
 
 
