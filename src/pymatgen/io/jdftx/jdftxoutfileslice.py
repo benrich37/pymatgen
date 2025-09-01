@@ -202,6 +202,7 @@ class JDFTXOutfileSlice:
     jsettings_lattice: JMinSettings | None = None
     jsettings_ionic: JMinSettings | None = None
     constant_lattice: bool | None = None
+    is_md: bool = False
 
     xc_func: str | None = None
 
@@ -418,6 +419,8 @@ class JDFTXOutfileSlice:
         if "lattice-minimize" in self.infile:
             latsteps = self.infile["lattice-minimize"]["nIterations"]
             self.constant_lattice = not (int(latsteps) > 0)
+        if "ionic-dynamics" in self.infile:
+            self.is_md = int(self.infile["ionic-dynamics"]["nSteps"]) > 0
 
     def _set_t_s(self) -> None:
         """Return the total time in seconds for the calculation.
