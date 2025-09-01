@@ -146,7 +146,11 @@ class JOutStructures:
 
     @classmethod
     def _from_out_slice(
-        cls, out_slice: list[str], opt_type: str = "IonicMinimize", init_struc: Structure | None = None
+        cls,
+        out_slice: list[str],
+        opt_type: str = "IonicMinimize",
+        init_struc: Structure | None = None,
+        is_md: bool = False,
     ) -> JOutStructures:
         """
         Return JStructures object.
@@ -163,7 +167,7 @@ class JOutStructures:
         if opt_type not in ["IonicMinimize", "LatticeMinimize"]:
             _opt_type = correct_geom_opt_type(opt_type)
         start_idx = _get_joutstructures_start_idx(out_slice)
-        slices = _get_joutstructure_list(out_slice[start_idx:], opt_type, init_structure=init_struc)
+        slices = _get_joutstructure_list(out_slice[start_idx:], opt_type, init_structure=init_struc, is_md=is_md)
         return cls(slices=slices)
 
     def __post_init__(self):
@@ -379,6 +383,7 @@ def _get_joutstructure_list(
     out_slice: list[str],
     opt_type: str | None,
     init_structure: Structure | None = None,
+    is_md: bool = False,
 ) -> list[JOutStructure]:
     """Return list of JOutStructure objects.
 
@@ -398,7 +403,9 @@ def _get_joutstructure_list(
         # This case should only be called if no optimization steps are found to avoid errors down the line.
         # If this is changed to always be the first structure, logic down the line on what is considered
         # a "single point" calculation will be broken.
-        joutstructure_list.append(JOutStructure._from_text_slice([], init_structure=init_structure, opt_type=opt_type))
+        joutstructure_list.append(
+            JOutStructure._from_text_slice([], init_structure=init_structure, opt_type=opt_type, is_md=is_md)
+        )
     for i, bounds in enumerate(out_bounds):
         if i > 0:
             init_structure = joutstructure_list[-1]

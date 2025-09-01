@@ -900,7 +900,10 @@ class JDFTXOutfileSlice:
         if self.geom_opt_type is None:
             raise ValueError("geom_opt_type not set yet.")
         self.jstrucs = JOutStructures._from_out_slice(
-            text, opt_type=self.geom_opt_type, init_struc=self.initial_structure
+            text,
+            opt_type=self.geom_opt_type,
+            init_struc=self.initial_structure,
+            is_md=self.is_md,
         )
         if self.etype is None:
             self.etype = self.jstrucs[-1].etype
