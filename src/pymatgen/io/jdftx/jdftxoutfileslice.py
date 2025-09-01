@@ -901,7 +901,7 @@ class JDFTXOutfileSlice:
             raise ValueError("geom_opt_type not set yet.")
         self.jstrucs = JOutStructures._from_out_slice(
             text,
-            opt_type=self.geom_opt_type,
+            opt_type=self.geom_opt_label,
             init_struc=self.initial_structure,
             is_md=self.is_md,
         )

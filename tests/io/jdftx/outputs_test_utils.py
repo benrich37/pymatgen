@@ -23,12 +23,6 @@ if TYPE_CHECKING:
 
 from .shared_test_utils import assert_same_value
 
-# def write_mt_file(fname: str, write_dir: Path = dump_files_dir):
-#     filepath = write_dir / fname
-#     with open(filepath, "w", encoding="utf-8") as f:
-#         f.write("if you're reading this yell at ben")
-#     f.close()
-
 
 def object_hasall_known_simple(obj: Any, knowndict: dict):
     for k in knowndict:
@@ -316,6 +310,13 @@ partial_lattice_init_outfile_known_lattice = {
     "20": 0.000000000000000 * bohr_to_ang,
     "21": 0.000000000000000 * bohr_to_ang,
     "22": 54.648857000000000 * bohr_to_ang,
+}
+
+
+example_aimd_outfile_path = ex_out_files_dir / Path("aimd.out")
+example_aimd_outfile_known = {
+    "pe": -545.811028 * Ha_to_eV,
+    "ke": 0.057297 * Ha_to_eV,
 }
 
 

@@ -417,6 +417,7 @@ def _get_joutstructure_list(
                 out_slice[bounds[0] : bounds[1]],
                 init_structure=init_structure,
                 opt_type=opt_type,
+                is_md=is_md,
             )
         except (ValueError, IndexError, TypeError, KeyError, AttributeError):
             if not i == len(out_bounds) - 1:
