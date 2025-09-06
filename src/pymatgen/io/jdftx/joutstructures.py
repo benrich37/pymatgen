@@ -384,6 +384,7 @@ def _get_joutstructure_list(
     opt_type: str | None,
     init_structure: Structure | None = None,
     is_md: bool = False,
+    skip_error_structures: bool = True,
 ) -> list[JOutStructure]:
     """Return list of JOutStructure objects.
 
@@ -392,8 +393,10 @@ def _get_joutstructure_list(
 
     Args:
         out_slice (list[str]): A slice of a JDFTx out file (individual call of JDFTx).
+        opt_type (str | None): Flag string indicating optimization type.
         init_structure (Structure | None): The initial structure if available, otherwise None.
-
+        is_md (bool): True if the calculation is a molecular dynamics (MD) simulation, False otherwise.
+        skip_error_structures (bool): If True, skip any structures that raise errors during parsing.
     Returns:
         list[JOutStructure]: The list of JOutStructure objects.
     """
@@ -420,7 +423,7 @@ def _get_joutstructure_list(
                 is_md=is_md,
             )
         except (ValueError, IndexError, TypeError, KeyError, AttributeError):
-            if not i == len(out_bounds) - 1:
+            if (not i == len(out_bounds) - 1) and (not skip_error_structures):
                 raise
         if joutstructure is not None:
             joutstructure_list.append(joutstructure)
