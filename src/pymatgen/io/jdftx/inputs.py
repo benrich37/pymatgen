@@ -31,6 +31,7 @@ from pymatgen.io.jdftx.jdftxinfile_master_format import (
     get_tag_object,
     get_tag_object_on_val,
 )
+from pymatgen.io.jdftx.outputs import JDFTXOutfile
 from pymatgen.util.io_utils import clean_lines
 from pymatgen.util.typing import SpeciesLike
 
@@ -41,6 +42,7 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike
     from typing_extensions import Self
 
+    from pymatgen.io.jdftx.outputs import JDFTXOutfileSlice
     from pymatgen.util.typing import PathLike
 
 __author__ = "Jacob Clary, Ben Rich"
@@ -215,24 +217,65 @@ class JDFTXInfile(dict, MSONable):
             )
 
     @classmethod
+    def from_outfile(cls, outfile: PathLike | JDFTXOutfile | JDFTXOutfileSlice) -> JDFTXInfile:
+        """Create a JDFTXInfile object from a JDFTXOutfile object or path to an outfile.
+
+        Args:
+            outfile (PathLike | JDFTXOutfile): Path to the JDFTX outfile or JDFTXOutfile object to convert.
+
+        Returns:
+            JDFTXInfile: The created JDFTXInfile object.
+        """
+        if isinstance(outfile, (Path, str)):
+            outfile = JDFTXOutfile.from_file(outfile)
+        return outfile.to_jdftxinfile()
+
+    @classmethod
     def from_structure(
         cls,
         structure: Structure,
         selective_dynamics: ArrayLike | None = None,
+        velocities: ArrayLike | None = None,
         write_cart_coords: bool = False,
+        ignore_site_properties: bool = False,
     ) -> JDFTXInfile:
         """Create a JDFTXInfile object from a pymatgen Structure.
 
         Args:
             structure (Structure): Structure to convert.
             selective_dynamics (ArrayLike, optional): Selective dynamics attribute for each site if available.
-                Shape Nx1, by default None.
+                Shape Nx1, by default None. If None, will check structure.site_properties for "selective_dynamics".
+            velocities (ArrayLike, optional): Velocities attribute for each site if available.
+                Shape Nx3, by default None. If None, will check structure.site_properties for "velocities".
+            write_cart_coords (bool, optional): Whether to write Cartesian coordinates instead of fractional.
+                Defaults to False.
+            ignore_site_properties (bool, optional): Whether to ignore site properties in the structure.
+                Defaults to False. If False, arguments selective_dynamics and velocities will changed from
+                values in site_properties if provided as None. If True, arguments selective_dynamics and velocities
+                will be left as provided, and the duplicated structure used for JDFTXStructure initialization will
+                have its site_properties cleared.
 
         Returns:
             JDFTXInfile: The created JDFTXInfile object.
         """
-        jdftxstructure = JDFTXStructure(structure, selective_dynamics)
-        jdftxstructure.write_cart_coords = write_cart_coords
+        _structure = structure.copy()
+        if (selective_dynamics is None and not ignore_site_properties) and (
+            _structure.site_properties.get("selective_dynamics") is not None
+        ):
+            selective_dynamics = _structure.site_properties["selective_dynamics"]
+        if (velocities is None and not ignore_site_properties) and (
+            _structure.site_properties.get("velocities") is not None
+        ):
+            velocities = _structure.site_properties["velocities"]
+        if ignore_site_properties:
+            _structure.site_properties = {}
+        jdftxstructure = JDFTXStructure(
+            _structure,
+            selective_dynamics=selective_dynamics,
+            velocities=velocities,
+            write_cart_coords=write_cart_coords,
+        )
+        # jdftxstructure.write_cart_coords = write_cart_coords
         return cls.from_jdftxstructure(jdftxstructure)
 
     @classmethod
@@ -942,16 +985,38 @@ class JDFTXStructure(MSONable):
                 self.structure = self.structure.get_sorted_structure()
         else:
             raise ValueError("Disordered structure with partial occupancies cannot be converted into JDFTXStructure!")
+        # For the optional properties, if they are all None, set to None to avoid writing them out, but check for
+        # data in structure.site_properties to populate them if available.
+        properties_to_sync = []
         if _allnone(self.selective_dynamics):
             self.selective_dynamics = None
+            properties_to_sync.append("selective_dynamics")
         if _allnone(self.velocities):
             self.velocities = None
+            properties_to_sync.append("velocities")
         if _allnone(self.constraint_types):
             self.constraint_types = None
+            properties_to_sync.append("constraint_types")
         if _allnone(self.constraint_vectors):
             self.constraint_vectors = None
+            properties_to_sync.append("constraint_vectors")
         if _allnone(self.hyperplane_group_names):
             self.hyperplane_group_names = None
+            properties_to_sync.append("group_names")
+        for prop in properties_to_sync:
+            self._sync_site_property(prop)
+
+    def _sync_site_property(self, x: str) -> None:
+        """Update a single JDFTXStructure class variable from structure site properties."""
+        if self.structure is None:
+            return
+        if x in ["velocities", "constraint_types", "constraint_vectors", "group_names"]:
+            if x in self.structure.site_properties:
+                setattr(self, x, self.structure.site_properties[x])
+        elif x == "selective_dynamics" and "selective_dynamics" in self.structure.site_properties:
+            self.selective_dynamics = selective_dynamics_site_prop_to_jdftx_interpretable(
+                self.structure.site_properties["selective_dynamics"]
+            )
 
     def __repr__(self) -> str:
         """Return representation of JDFTXStructure file.
