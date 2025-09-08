@@ -31,7 +31,6 @@ from pymatgen.io.jdftx.jdftxinfile_master_format import (
     get_tag_object,
     get_tag_object_on_val,
 )
-from pymatgen.io.jdftx.outputs import JDFTXOutfile
 from pymatgen.util.io_utils import clean_lines
 from pymatgen.util.typing import SpeciesLike
 
@@ -42,7 +41,6 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike
     from typing_extensions import Self
 
-    from pymatgen.io.jdftx.outputs import JDFTXOutfileSlice
     from pymatgen.util.typing import PathLike
 
 __author__ = "Jacob Clary, Ben Rich"
@@ -130,7 +128,6 @@ class JDFTXInfile(dict, MSONable):
         if not isinstance(key, str):
             raise TypeError(f"{key} is not a string!")
         try:
-            # tag_object = get_tag_object_on_val(key, value)
             tag_object = get_tag_object(key)
         except KeyError:
             raise KeyError(f"The {key} tag is not in MASTER_TAG_LIST")
@@ -141,12 +138,6 @@ class JDFTXInfile(dict, MSONable):
             value = value[0]
         tag_object = get_tag_object_on_val(key, value)
 
-        # if isinstance(tag_object, MultiformatTag):
-        #     if isinstance(value, str):
-        #         i = tag_object.get_format_index_for_str_value(key, value)
-        #     else:
-        #         i, _ = tag_object._determine_format_option(key, value)
-        #     tag_object = tag_object.format_options[i]
         if tag_object.can_repeat and key in self:
             del self[key]
         if tag_object.can_repeat and not isinstance(value, list):
@@ -215,20 +206,6 @@ class JDFTXInfile(dict, MSONable):
                 path_parent=path_parent,
                 validate_value_boundaries=validate_value_boundaries,
             )
-
-    @classmethod
-    def from_outfile(cls, outfile: PathLike | JDFTXOutfile | JDFTXOutfileSlice) -> JDFTXInfile:
-        """Create a JDFTXInfile object from a JDFTXOutfile object or path to an outfile.
-
-        Args:
-            outfile (PathLike | JDFTXOutfile): Path to the JDFTX outfile or JDFTXOutfile object to convert.
-
-        Returns:
-            JDFTXInfile: The created JDFTXInfile object.
-        """
-        if isinstance(outfile, (Path, str)):
-            outfile = JDFTXOutfile.from_file(outfile)
-        return outfile.to_jdftxinfile()
 
     @classmethod
     def from_structure(

@@ -185,7 +185,7 @@ example_sp_outfile_known_simple = {
     "total_electrons": 288.0,
     "nbands": 174,
     "nat": 16,
-    "t_s": 165.87,
+    "t_s": 172.27,
     "geom_opt_type": "single point",
     "prefix": "jdft",
     "etype": "F",
