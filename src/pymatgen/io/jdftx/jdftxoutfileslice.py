@@ -202,6 +202,7 @@ class JDFTXOutfileSlice:
     jsettings_lattice: JMinSettings | None = None
     jsettings_ionic: JMinSettings | None = None
     constant_lattice: bool | None = None
+    is_md: bool = False
 
     xc_func: str | None = None
 
@@ -418,6 +419,8 @@ class JDFTXOutfileSlice:
         if "lattice-minimize" in self.infile:
             latsteps = self.infile["lattice-minimize"]["nIterations"]
             self.constant_lattice = not (int(latsteps) > 0)
+        if "ionic-dynamics" in self.infile:
+            self.is_md = int(self.infile["ionic-dynamics"]["nSteps"]) > 0
 
     def _set_t_s(self) -> None:
         """Return the total time in seconds for the calculation.
@@ -897,7 +900,10 @@ class JDFTXOutfileSlice:
         if self.geom_opt_type is None:
             raise ValueError("geom_opt_type not set yet.")
         self.jstrucs = JOutStructures._from_out_slice(
-            text, opt_type=self.geom_opt_type, init_struc=self.initial_structure
+            text,
+            opt_type=self.geom_opt_label,
+            init_struc=self.initial_structure,
+            is_md=self.is_md,
         )
         if self.etype is None:
             self.etype = self.jstrucs[-1].etype
@@ -1260,8 +1266,13 @@ class JDFTXOutfileSlice:
         base_infile.strip_structure_tags()
         if self.structure is None:
             return base_infile
+        # Optimization restrictions and velocities are carried over the structure site properties
         infile = JDFTXInfile.from_structure(self.structure)
         infile += base_infile
+        # Set most recent thermostat velocity if MD with Nose-Hoover
+        if self.is_md and self.infile["ionic-dynamics"]["statMethod"] == "NoseHoover":
+            tv = self.jstrucs[-1].thermostat_velocity
+            infile["thermostat-velocity"] = {"v0": tv[0], "v1": tv[1], "v2": tv[2]}
         return infile
 
     def _check_solvation(self) -> bool:

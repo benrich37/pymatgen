@@ -128,7 +128,7 @@ class JOutStructure(Structure):
     elec_linmin: float | np.float64 | None = None
     structure: Structure | None = None
     is_md: bool = False
-    thermostat_velocity: np.ndarray | None = None
+    # thermostat_velocity: np.ndarray | None = None
     _velocities: list[NDArray[np.float64] | None] | None = None
     _constraint_vectors: list[NDArray[np.float64] | list[NDArray[np.float64]] | None] | None = None
     _constraint_types: list[str | None] | None = None
@@ -894,8 +894,12 @@ class JOutStructure(Structure):
                     nstep = int(_nstep)
                     self.nstep = nstep
                     self.t_s = get_colon_val(line, "t[s]: ")
-                    self.pe = get_colon_val(line, "PE:") * Ha_to_eV
-                    self.ke = get_colon_val(line, "KE:") * Ha_to_eV
+                    self.pe = get_colon_val(line, "PE:")
+                    if self.pe is not None:
+                        self.pe *= Ha_to_eV
+                    self.ke = get_colon_val(line, "KE:")
+                    if self.ke is not None:
+                        self.ke *= Ha_to_eV
                     self.t_k = get_colon_val(line, "T[K]:")
                     self.p_bar = get_colon_val(line, "P[Bar]:")
                     self.tmd_fs = get_colon_val(line, "tMD[fs]:")
@@ -974,7 +978,6 @@ class JOutStructure(Structure):
             "stress": self.stress,
             "kinetic_stress": self.kinetic_stress,
             "strain": self.strain,
-            "thermostat_velocity": self.thermostat_velocity,
         }
 
     def _init_structure(self) -> None:

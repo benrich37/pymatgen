@@ -11,6 +11,8 @@ from pymatgen.io.jdftx.outputs import JDFTXOutfile, _jof_atr_from_last_slice
 from .outputs_test_utils import (
     etot_etype_outfile_known_simple,
     etot_etype_outfile_path,
+    example_aimd_outfile_known,
+    example_aimd_outfile_path,
     example_ionmin_outfile_known,
     example_ionmin_outfile_known_simple,
     example_ionmin_outfile_path,
@@ -114,3 +116,20 @@ def test_vib_parse(
     jdftxoutfile = JDFTXOutfile.from_file(example_vib_outfile_path)
     assert_same_value(jdftxoutfile.slices[-1].vibrational_modes, example_vib_modes_known)
     assert_same_value(jdftxoutfile.slices[-1].vibrational_energy_components, example_vib_nrg_components)
+
+
+@pytest.mark.parametrize(
+    ("aimd_outfile_path", "aimd_outfile_known"),
+    [
+        (example_aimd_outfile_path, example_aimd_outfile_known),
+    ],
+)
+def test_aimd_parse(aimd_outfile_path: Path, aimd_outfile_known: dict):
+    """
+    Test that the AIMD properties are parsed correctly from the outfile.
+    """
+    jdftxoutfile = JDFTXOutfile.from_file(aimd_outfile_path)
+    assert jdftxoutfile.slices[-1].is_md
+    for key, val in aimd_outfile_known.items():
+        assert hasattr(jdftxoutfile.slices[-1].jstrucs, key)
+        assert_same_value(getattr(jdftxoutfile.slices[-1].jstrucs, key), val)
