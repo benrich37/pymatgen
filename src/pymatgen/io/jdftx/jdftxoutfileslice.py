@@ -1267,12 +1267,13 @@ class JDFTXOutfileSlice:
         if self.structure is None:
             return base_infile
         # Optimization restrictions and velocities are carried over the structure site properties
-        infile = JDFTXInfile.from_structure(self.structure)
-        infile += base_infile
+        add_infile = JDFTXInfile.from_structure(self.structure)
+        infile = base_infile + add_infile
+        # infile +=
         # Set most recent thermostat velocity if MD with Nose-Hoover
         if self.is_md and self.infile["ionic-dynamics"]["statMethod"] == "NoseHoover":
-            tv = self.jstrucs[-1].thermostat_velocity
-            infile["thermostat-velocity"] = {"v0": tv[0], "v1": tv[1], "v2": tv[2]}
+            tv = self.jstrucs.thermostat_velocity
+            infile["thermostat-velocity"] = {"v1": tv[0], "v2": tv[1], "v3": tv[2]}
         return infile
 
     def _check_solvation(self) -> bool:

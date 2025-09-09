@@ -720,6 +720,7 @@ class JOutStructure(Structure):
                 posns = np.dot(posns, self.lattice.matrix)
             else:
                 posns *= bohr_to_ang
+                velocities = [v * bohr_to_ang if v is not None else None for v in velocities]
             for i in range(natoms):
                 self.append(species=names[i], coords=posns[i], coords_are_cartesian=True)
             self.selective_dynamics = selective_dynamics

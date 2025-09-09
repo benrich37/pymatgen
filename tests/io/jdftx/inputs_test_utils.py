@@ -63,3 +63,4 @@ ex_infile1_knowns = {
 
 ex_infile2_fname = ex_in_files_dir / "example_sp.in"
 ex_infile3_fname = ex_in_files_dir / "ct_slab_001.in"
+aimd_infile_fname = ex_in_files_dir / "aimd.in"

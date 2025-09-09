@@ -1361,6 +1361,38 @@ class DumpTagContainer(TagContainer):
         self._check_unread_values(tag, value)
         return subdict
 
+    def validate_value_type(self, tag: str, value: Any, try_auto_type_fix: bool = False) -> tuple[str, bool, Any]:
+        """Validate the type of the value for this tag.
+
+        Args:
+            tag (str): The tag to validate the type of the value for.
+            value (Any): The value to validate the type of.
+            try_auto_type_fix (bool, optional): Whether to try to automatically fix the type of the value, by default
+                False.
+
+        Returns:
+            tuple[str, bool, Any]: The tag, whether the value is of the correct type, and the possibly fixed value.
+        """
+        # At the moment, the value for a dump tag must be a dict or list of dicts
+        value_dict = value
+        # value_dict = self.get_dict_representation(tag, value)
+        self._validate_repeat(tag, value_dict)
+        results = [self._validate_single_entry(x, try_auto_type_fix=try_auto_type_fix) for x in value_dict]
+        tags_list_list: list[list[str]] = [result[0] for result in results]
+        is_valids_list_list: list[list[bool]] = [result[1] for result in results]
+        updated_value: Any = [result[2] for result in results]
+        tag_out = ",".join([",".join(x) for x in tags_list_list])
+        is_valid_out = all(all(x) for x in is_valids_list_list)
+        if not is_valid_out:
+            warnmsg = "Invalid value(s) found for: "
+            for i, x in enumerate(is_valids_list_list):
+                if not all(x):
+                    for j, y in enumerate(x):
+                        if not y:
+                            warnmsg += f"{tags_list_list[i][j]} "
+            warnings.warn(warnmsg, stacklevel=2)
+        return tag_out, is_valid_out, updated_value
+
 
 def _flatten_list(tag: str, list_of_lists: list[Any]) -> list[Any]:
     """Flatten list of lists into a single list, then stop.

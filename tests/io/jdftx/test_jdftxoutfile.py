@@ -2,12 +2,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import numpy as np
 import pytest
 
 from pymatgen.io.jdftx._output_utils import read_outfile_slices
+from pymatgen.io.jdftx.inputs import JDFTXInfile
 from pymatgen.io.jdftx.jdftxoutfileslice import JDFTXOutfileSlice
 from pymatgen.io.jdftx.outputs import JDFTXOutfile, _jof_atr_from_last_slice
 
+from .inputs_test_utils import aimd_infile_fname
 from .outputs_test_utils import (
     etot_etype_outfile_known_simple,
     etot_etype_outfile_path,
@@ -133,3 +136,34 @@ def test_aimd_parse(aimd_outfile_path: Path, aimd_outfile_known: dict):
     for key, val in aimd_outfile_known.items():
         assert hasattr(jdftxoutfile.slices[-1].jstrucs, key)
         assert_same_value(getattr(jdftxoutfile.slices[-1].jstrucs, key), val)
+
+
+@pytest.mark.parametrize(
+    ("outfile_path", "infile_path", "outfile_known"),
+    [
+        (example_aimd_outfile_path, aimd_infile_fname, example_aimd_outfile_known),
+    ],
+)
+def test_outfile_to_infile(outfile_path: Path, infile_path: Path, outfile_known: dict):
+    """
+    Test that the JDFTXOutfileSlice.to_infile() method works correctly.
+    """
+    jdftxoutfile: JDFTXOutfile = JDFTXOutfile.from_file(outfile_path)
+    JDFTXInfile.from_file(infile_path)
+    new_infile: JDFTXInfile = jdftxoutfile.to_jdftxinfile()
+    old_struc = jdftxoutfile.structure
+    new_struc = new_infile.to_pmg_structure(new_infile, fill_site_properties=True)
+    old_coords = old_struc.cart_coords
+    new_coords = new_struc.cart_coords
+    assert_same_value(old_coords, new_coords)
+    old_velocities = old_struc.site_properties.get("velocities", None)
+    new_velocities = new_struc.site_properties.get("velocities", None)
+    [ov / nv for ov, nv in zip(old_velocities, new_velocities, strict=False)]
+    assert_same_value(old_velocities, new_velocities)
+    old_thermostat_velocity = jdftxoutfile.slices[-1].jstrucs.thermostat_velocity
+    new_thermostat_velocity = np.array([new_infile["thermostat-velocity"][f"v{i + 1}"] for i in range(3)])
+    assert_same_value(old_thermostat_velocity, new_thermostat_velocity)
+
+    # TODO: Do the old TODO related to filling out default input tags so the robust comparison below
+    # can be used instead of the above.
+    # assert new_infile.is_comparable_to(jdftxinfile, exclude_tags=["ion", "thermostat-velocity", "dump"])
