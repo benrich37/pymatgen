@@ -410,6 +410,12 @@ _jof_atr_from_last_slice = (
     "infile",
     "vibrational_modes",
     "vibrational_energy_components",
+    "pe",
+    "ke",
+    "t_k",
+    "p_bar",
+    "tmd_fs",
+    "thermostat_velocity",
 )
 
 # TODO: Remove references to the deprecated 'jsettings_*' attributes in `JDFTXOutfile` and `JDFTXOutfileSlice`

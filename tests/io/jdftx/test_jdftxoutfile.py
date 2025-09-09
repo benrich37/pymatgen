@@ -136,6 +136,10 @@ def test_aimd_parse(aimd_outfile_path: Path, aimd_outfile_known: dict):
     for key, val in aimd_outfile_known.items():
         assert hasattr(jdftxoutfile.slices[-1].jstrucs, key)
         assert_same_value(getattr(jdftxoutfile.slices[-1].jstrucs, key), val)
+        assert hasattr(jdftxoutfile.slices[-1], key)
+        assert_same_value(getattr(jdftxoutfile.slices[-1], key), val)
+        assert hasattr(jdftxoutfile, key)
+        assert_same_value(getattr(jdftxoutfile, key), val)
 
 
 @pytest.mark.parametrize(

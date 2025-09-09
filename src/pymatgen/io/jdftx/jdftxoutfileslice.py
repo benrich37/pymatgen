@@ -58,6 +58,12 @@ _jofs_atr_from_jstrucs = (
     "elec_alpha",
     "elec_linmin",
     "t_s",
+    "pe",
+    "ke",
+    "t_k",
+    "p_bar",
+    "tmd_fs",
+    "thermostat_velocity",
 )
 
 
