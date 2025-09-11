@@ -958,6 +958,10 @@ class JDFTXStructure(MSONable):
 
         Asserts self.structure is ordered, and adds selective dynamics if needed.
         """
+        # `Structure.is_ordered` checks for partial occupancies, which JDFTx cannot handle.
+        # This does not check for ordering of species.
+        if not self.structure.is_ordered:
+            raise ValueError("Disordered structure with partial occupancies cannot be converted into JDFTXStructure!")
         if self.selective_dynamics is not None:
             # Convert provided selective dynamics into JDFTX interpretable format
             self.selective_dynamics = selective_dynamics_site_prop_to_jdftx_interpretable(self.selective_dynamics)
@@ -976,24 +980,6 @@ class JDFTXStructure(MSONable):
                 if not name_str[j].isdigit():
                     name += name_str[j]
             self.structure.species[i] = name
-        # `Structure.is_ordered` checks for partial occupancies, which JDFTx cannot handle.
-        # This does not check for ordering of species.
-        # if self.structure.is_ordered:
-        #     site_properties = {}
-        #     if self.selective_dynamics is not None:
-        #         selective_dynamics = np.array(self.selective_dynamics)
-        #         if not selective_dynamics.all():
-        #             site_properties["selective_dynamics"] = selective_dynamics
-
-        #     # create new copy of structure so can add selective dynamics and sort atoms if needed
-        #     structure = Structure.from_sites(self.structure.sites)
-        #     self.structure = structure.copy(site_properties=site_properties)
-        #     if self.sort_structure:
-        #         self.structure = self.structure.get_sorted_structure()
-        # else:
-        #     raise ValueError("Disordered structure with partial occupancies cannot be converted into JDFTXStructure!")
-        if not self.structure.is_ordered:
-            raise ValueError("Disordered structure with partial occupancies cannot be converted into JDFTXStructure!")
         # For the optional properties, if they are all None, set to None to avoid writing them out, but check for
         # data in structure.site_properties to populate them if available.
         properties_to_sync = []
@@ -1085,7 +1071,10 @@ class JDFTXStructure(MSONable):
         Returns:
             JDFTXStructure: The created JDFTXStructure object.
         """
-
+        if sort_structure:
+            raise UserWarning(
+                "Structure sorting requested but is not currently implemented! Site ordering will not be changed."
+            )
         lattice = _infile_to_pmg_lattice(jdftxinfile)
         atomic_symbols = [x["species-id"] for x in jdftxinfile["ion"]]
         coords = np.array([[x["x0"], x["x1"], x["x2"]] for x in jdftxinfile["ion"]])

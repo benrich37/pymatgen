@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 import pytest
 
-from pymatgen.core.structure import Structure
+from pymatgen.core.structure import Site, Structure
 from pymatgen.io.jdftx.inputs import JDFTXInfile, JDFTXStructure, selective_dynamics_site_prop_to_jdftx_interpretable
 from pymatgen.io.jdftx.jdftxinfile_default_inputs import default_inputs
 from pymatgen.io.jdftx.jdftxinfile_master_format import get_tag_object
@@ -281,6 +281,20 @@ def test_jdftxstructure():
     assert_equiv_jdftxstructure(jstruct, struct2)
     struct3 = JDFTXStructure.from_dict(jstruct.as_dict())
     assert_equiv_jdftxstructure(jstruct, struct3)
+
+
+def test_disordered_structures():
+    """Test that disordered structures are handled correctly"""
+    jif = JDFTXInfile.from_file(ex_infile2_fname)
+    struct = jif.structure
+    # Making a disordered structure by replacing some sites with partial occupancies
+    struct.sites[1] = Site(species={"Si": 0.5, "Ge": 0.5}, coords=struct.sites[1].frac_coords)
+    # struct[0] = struct[0].replace(species={"Si": 0.5, "Ge": 0.5})
+    # struct[1] = struct[1].replace(species={"Si": 0.75, "Ge": 0.25})
+    with pytest.raises(
+        ValueError, match="Disordered structure with partial occupancies cannot be converted into JDFTXStructure!"
+    ):
+        JDFTXStructure(structure=struct)
 
 
 def test_jdftxstructure_infile_site_properties_conversion():
