@@ -215,6 +215,9 @@ class JDFTXInfile(dict, MSONable):
         structure: Structure,
         selective_dynamics: ArrayLike | None = None,
         velocities: ArrayLike | None = None,
+        constraint_types: ArrayLike | None = None,
+        constraint_vectors: ArrayLike | None = None,
+        hyperplane_group_names: ArrayLike | None = None,
         write_cart_coords: bool = False,
         ignore_site_properties: bool = False,
     ) -> JDFTXInfile:
@@ -238,20 +241,23 @@ class JDFTXInfile(dict, MSONable):
             JDFTXInfile: The created JDFTXInfile object.
         """
         _structure = structure.copy()
-        if (selective_dynamics is None and not ignore_site_properties) and (
-            _structure.site_properties.get("selective_dynamics") is not None
-        ):
-            selective_dynamics = _structure.site_properties["selective_dynamics"]
-        if (velocities is None and not ignore_site_properties) and (
-            _structure.site_properties.get("velocities") is not None
-        ):
-            velocities = _structure.site_properties["velocities"]
+        # if (selective_dynamics is None and not ignore_site_properties) and (
+        #     _structure.site_properties.get("selective_dynamics") is not None
+        # ):
+        #     selective_dynamics = _structure.site_properties["selective_dynamics"]
+        # if (velocities is None and not ignore_site_properties) and (
+        #     _structure.site_properties.get("velocities") is not None
+        # ):
+        #     velocities = _structure.site_properties["velocities"]
         if ignore_site_properties:
             _structure.site_properties = {}
         jdftxstructure = JDFTXStructure(
             _structure,
             selective_dynamics=selective_dynamics,
             velocities=velocities,
+            constraint_types=constraint_types,
+            constraint_vectors=constraint_vectors,
+            hyperplane_group_names=hyperplane_group_names,
             write_cart_coords=write_cart_coords,
         )
         return cls.from_jdftxstructure(jdftxstructure)
@@ -879,7 +885,9 @@ def _allnone(val) -> bool:
     return False
 
 
-def selective_dynamics_site_prop_to_jdftx_interpretable(selective_dynamics: Sequence[Any]) -> ArrayLike:
+def selective_dynamics_site_prop_to_jdftx_interpretable(
+    selective_dynamics: Sequence[Any] | ArrayLike[int | float | bool],
+) -> ArrayLike:
     """Convert selective dynamics site property to JDFTX interpretable format.
 
     Args:
@@ -890,11 +898,10 @@ def selective_dynamics_site_prop_to_jdftx_interpretable(selective_dynamics: Sequ
     """
     _selective_dynamics = []
     for i in range(len(selective_dynamics)):
-        # Not worrying about partial free axes for now, just setting movescale to 0 if any axis is fixed
-        if any(not x for x in selective_dynamics[i]):
-            _selective_dynamics.append(0)
+        if isinstance(selective_dynamics[i], (list | tuple | np.ndarray)):
+            _selective_dynamics.append(int(not any(not x for x in selective_dynamics[i])))
         else:
-            _selective_dynamics.append(1)
+            _selective_dynamics.append(int(bool(selective_dynamics[i])))
     return np.array(_selective_dynamics)
 
 
@@ -951,12 +958,9 @@ class JDFTXStructure(MSONable):
 
         Asserts self.structure is ordered, and adds selective dynamics if needed.
         """
-        if ((self.structure is not None) and ("selective_dynamics" in self.structure.site_properties)) and (
-            self.selective_dynamics is None
-        ):
-            self.selective_dynamics = selective_dynamics_site_prop_to_jdftx_interpretable(
-                self.structure.site_properties["selective_dynamics"]
-            )
+        if self.selective_dynamics is not None:
+            # Convert provided selective dynamics into JDFTX interpretable format
+            self.selective_dynamics = selective_dynamics_site_prop_to_jdftx_interpretable(self.selective_dynamics)
         for i in range(len(self.structure.species)):
             name = ""
             if isinstance(self.structure.species[i], str):
@@ -972,19 +976,23 @@ class JDFTXStructure(MSONable):
                 if not name_str[j].isdigit():
                     name += name_str[j]
             self.structure.species[i] = name
-        if self.structure.is_ordered:
-            site_properties = {}
-            if self.selective_dynamics is not None:
-                selective_dynamics = np.array(self.selective_dynamics)
-                if not selective_dynamics.all():
-                    site_properties["selective_dynamics"] = selective_dynamics
+        # `Structure.is_ordered` checks for partial occupancies, which JDFTx cannot handle.
+        # This does not check for ordering of species.
+        # if self.structure.is_ordered:
+        #     site_properties = {}
+        #     if self.selective_dynamics is not None:
+        #         selective_dynamics = np.array(self.selective_dynamics)
+        #         if not selective_dynamics.all():
+        #             site_properties["selective_dynamics"] = selective_dynamics
 
-            # create new copy of structure so can add selective dynamics and sort atoms if needed
-            structure = Structure.from_sites(self.structure.sites)
-            self.structure = structure.copy(site_properties=site_properties)
-            if self.sort_structure:
-                self.structure = self.structure.get_sorted_structure()
-        else:
+        #     # create new copy of structure so can add selective dynamics and sort atoms if needed
+        #     structure = Structure.from_sites(self.structure.sites)
+        #     self.structure = structure.copy(site_properties=site_properties)
+        #     if self.sort_structure:
+        #         self.structure = self.structure.get_sorted_structure()
+        # else:
+        #     raise ValueError("Disordered structure with partial occupancies cannot be converted into JDFTXStructure!")
+        if not self.structure.is_ordered:
             raise ValueError("Disordered structure with partial occupancies cannot be converted into JDFTXStructure!")
         # For the optional properties, if they are all None, set to None to avoid writing them out, but check for
         # data in structure.site_properties to populate them if available.
@@ -995,17 +1003,10 @@ class JDFTXStructure(MSONable):
         if _allnone(self.velocities):
             self.velocities = None
             properties_to_sync.append("velocities")
-        if _allnone(self.constraint_types):
-            self.constraint_types = None
-            properties_to_sync.append("constraint_types")
-        if _allnone(self.constraint_vectors):
-            self.constraint_vectors = None
-            properties_to_sync.append("constraint_vectors")
-        if _allnone(self.hyperplane_group_names):
-            self.hyperplane_group_names = None
-            properties_to_sync.append("group_names")
-        for prop in properties_to_sync:
-            self._sync_site_property(prop)
+        # We do not continue this for constraint_types, constraint_vectors, hyperplane_group_names
+        # because these are likely inhomogeneous, and thus cannot be stored in structure.site_properties
+        for x in properties_to_sync:
+            self._sync_site_property(x)
 
     def _sync_site_property(self, x: str) -> None:
         """Update a single JDFTXStructure class variable from structure site properties."""
@@ -1274,6 +1275,10 @@ class JDFTXStructure(MSONable):
         return cls(
             Structure.from_dict(params["structure"]),
             selective_dynamics=params["selective_dynamics"],
+            velocities=params.get("velocities"),
+            constraint_types=params.get("constraint_types"),
+            constraint_vectors=params.get("constraint_vectors"),
+            hyperplane_group_names=params.get("hyperplane_group_names"),
         )
 
 
