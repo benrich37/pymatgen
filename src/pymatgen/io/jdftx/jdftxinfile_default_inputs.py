@@ -285,6 +285,7 @@ pureNbulk = {
 default_fluid_params = {
     "H2O": {
         "concentration": pureNbulk["H2O"] / (mol / liter),  # in mol/L
+        "functional": "ScalarEOS",
         "epsBulk": 78.4,
         "pMol": 0.92466,
         "epsInf": 1.77,
@@ -302,6 +303,7 @@ default_fluid_params = {
     },
     "CHCl3": {
         "concentration": pureNbulk["CHCl3"] / (mol / liter),  # in mol/L
+        "functional": "ScalarEOS",
         "epsBulk": 4.8069,
         "pMol": 0.49091,
         "epsInf": 2.09,
@@ -312,6 +314,7 @@ default_fluid_params = {
     },
     "CCl4": {
         "concentration": pureNbulk["CCl4"] / (mol / liter),  # in mol/L
+        "functional": "ScalarEOS",
         "epsBulk": 2.238,
         "pMol": 0.0,
         "epsInf": 2.13,
@@ -322,6 +325,7 @@ default_fluid_params = {
     },
     "CH3CN": {
         "concentration": pureNbulk["CH3CN"] / (mol / liter),  # in mol/L
+        "functional": "ScalarEOS",
         "epsBulk": 38.8,
         "pMol": 1.89,
         "epsInf": 1.81,
@@ -332,6 +336,7 @@ default_fluid_params = {
     },
     "CH2Cl2": {
         "concentration": pureNbulk["CH2Cl2"] / (mol / liter),  # in mol/L
+        "functional": "ScalarEOS",
         "epsBulk": 9.08,
         "pMol": 0.89,
         "epsInf": 1.424,
@@ -342,6 +347,7 @@ default_fluid_params = {
     },
     "Ethanol": {
         "concentration": pureNbulk["Ethanol"] / (mol / liter),  # in mol/L
+        "functional": "ScalarEOS",
         "epsBulk": 24.3,
         "pMol": 0.76,
         "epsInf": 1.361,
@@ -352,6 +358,7 @@ default_fluid_params = {
     },
     "Methanol": {
         "concentration": pureNbulk["Methanol"] / (mol / liter),  # in mol/L
+        "functional": "ScalarEOS",
         "epsBulk": 32.66,
         "pMol": 0.791,
         "epsInf": 1.328,
@@ -362,6 +369,7 @@ default_fluid_params = {
     },
     "Octanol": {
         "concentration": pureNbulk["Octanol"] / (mol / liter),  # in mol/L
+        "functional": "ScalarEOS",
         "epsBulk": 10.30,
         "pMol": 0.661,
         "epsInf": 2.036,
@@ -372,6 +380,7 @@ default_fluid_params = {
     },
     "DMC": {
         "concentration": pureNbulk["DMC"] / (mol / liter),  # in mol/L
+        "functional": "ScalarEOS",
         "epsBulk": 3.1,
         "pMol": 0.16,
         "epsInf": 1.87,
@@ -380,6 +389,7 @@ default_fluid_params = {
     },
     "EC": {
         "concentration": pureNbulk["EC"] / (mol / liter),  # in mol/L
+        "functional": "ScalarEOS",
         "epsBulk": 90.5,
         "pMol": 2.88,
         "epsInf": 2.00,
@@ -388,6 +398,7 @@ default_fluid_params = {
     },
     "PC": {
         "concentration": pureNbulk["PC"] / (mol / liter),  # in mol/L
+        "functional": "ScalarEOS",
         "epsBulk": 64.0,
         "pMol": 2.95,
         "epsInf": 2.02,
@@ -396,6 +407,7 @@ default_fluid_params = {
     },
     "DMF": {
         "concentration": pureNbulk["DMF"] / (mol / liter),  # in mol/L
+        "functional": "ScalarEOS",
         "epsBulk": 38.0,
         "pMol": 2.19,
         "epsInf": 2.05,
@@ -404,6 +416,7 @@ default_fluid_params = {
     },
     "THF": {
         "concentration": pureNbulk["THF"] / (mol / liter),  # in mol/L
+        "functional": "ScalarEOS",
         "epsBulk": 7.6,
         "pMol": 0.90,
         "epsInf": 1.98,
@@ -412,6 +425,7 @@ default_fluid_params = {
     },
     "DMSO": {
         "concentration": pureNbulk["DMSO"] / (mol / liter),  # in mol/L
+        "functional": "ScalarEOS",
         "epsBulk": 48.0,
         "pMol": 1.56,
         "epsInf": 2.19,
@@ -421,6 +435,7 @@ default_fluid_params = {
     },
     "EthylEther": {
         "concentration": pureNbulk["EthylEther"] / (mol / liter),  # in mol/L
+        "functional": "ScalarEOS",
         "epsBulk": 4.34,
         "pMol": 0.487,
         "epsInf": 1.82,
@@ -429,6 +444,7 @@ default_fluid_params = {
     },
     "Chlorobenzene": {
         "concentration": pureNbulk["Chlorobenzene"] / (mol / liter),  # in mol/L
+        "functional": "ScalarEOS",
         "epsBulk": 5.69,
         "pMol": 0.72,
         "epsInf": 2.32,
@@ -437,6 +453,7 @@ default_fluid_params = {
     },
     "Isobutanol": {
         "concentration": pureNbulk["Isobutanol"] / (mol / liter),  # in mol/L
+        "functional": "ScalarEOS",
         "epsBulk": 17.93,
         "pMol": 0.646,
         "epsInf": 1.949,
@@ -444,21 +461,49 @@ default_fluid_params = {
     },
     "CarbonDisulfide": {
         "concentration": pureNbulk["CarbonDisulfide"] / (mol / liter),  # in mol/L
+        "functional": "ScalarEOS",
         "epsBulk": 2.641,
         "epsInf": 2.641,
         "pMol": 0.0,
     },
     "Glyme": {
         "concentration": pureNbulk["Glyme"] / (mol / liter),  # in mol/L
+        "functional": "ScalarEOS",
         "epsBulk": 7.20,
         "epsInf": 1.90,
         "pMol": 0.0,
     },
     "EthyleneGlycol": {
         "concentration": pureNbulk["EthyleneGlycol"] / (mol / liter),  # in mol/L
+        "functional": "ScalarEOS",
         "epsBulk": 41.4,
         "epsInf": 1.43,
         "pMol": 0.0,
+    },
+    "Na+": {
+        "functional": "MeanFieldLJ",
+        "concentration": 1.0,
+        "Rvdw": 1.16 * Angstrom,
+    },
+    "K+": {
+        "functional": "MeanFieldLJ",
+        "concentration": 1.0,
+        "Rvdw": 1.51 * Angstrom,
+    },
+    "Cl-": {
+        "functional": "MeanFieldLJ",
+        "concentration": 1.0,
+        "Rvdw": 1.67 * Angstrom,
+    },
+    "F-": {
+        "functional": "MeanFieldLJ",
+        "concentration": 1.0,
+        "Rvdw": 1.19 * Angstrom,
+    },
+    "ClO4-": {
+        "functional": "MeanFieldLJ",
+        "concentration": 1.0,
+        "Rvdw": 2.41 * Angstrom,
     },
 }
 
@@ -479,6 +524,6 @@ empty_fluid_component = {
     "Rvdw": 0.0,
     "s2quadType": "7design24",
     "sigmaBulk": 0.0,
-    "tauNuc": 8.3e3 * fs,
+    "tauNuc": float(int(8.3e3 * fs)),
     "translation": "LinearSpline",
 }
