@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import numpy as np
+
 # TODO: These default values only represent what is filled in by JDFTx when a tag as a whole is missing.
 # Subtags have different default values depending on other subtags of the same tag.
 # One example is fluid-minimize, which has different convergence thresholds and max iterations depending
@@ -173,4 +175,335 @@ default_inputs = {
     },
     "symmetries": "automatic",
     "symmetry-threshold": 0.0001,
+}
+
+
+def fill_default_values(tag, cur_values):
+    default_values = default_inputs.get(tag)
+    if (default_values is None) or (not isinstance(default_values, dict)):
+        return cur_values
+    ret_values = default_values.copy()
+    ret_values.update(cur_values)
+    return ret_values
+
+
+# Angstrom = 1/0.5291772
+# meter = 1e10*Angstrom
+# Joule = 1/4.35974434e-18
+
+# Newton = Joule/meter
+# Pascal = Newton/(meter*meter)
+# KPascal = 1000*Pascal
+# liter = 1e-3*(meter**3)
+# mol = 6.0221367e23
+# #
+# Angstrom = 1/0.5291772
+# meter = 1e10*Angstrom
+# Joule = 1/4.35974434e-18
+# Newton = Joule/meter
+# Pascal = Newton/(meter*meter)
+# KPascal = 1000*Pascal
+# T = 298
+# eV = 1/27.21138505
+# Ryd = 0.5
+# Kelvin = 1.3806488e-23*Joule
+
+# kg = 1./9.10938291e-31
+# sec = np.sqrt((kg*meter)/Newton)
+# fs = sec*1.0e-15
+
+# Energy, temperature units in Hartrees:
+eV = 1 / 27.21138505  # eV in Hartrees
+Ryd = 0.5  # Rydberg in Hartrees
+Joule = 1 / 4.35974434e-18  # Joule in Hartrees
+KJoule = 1000 * Joule  # KJoule in Hartrees
+Kcal = KJoule * 4.184  # Kcal in Hartrees
+Kelvin = 1.3806488e-23 * Joule  # Kelvin in Hartrees
+invcm = 1.0 / 219474.6313705  # Inverse cm in Hartrees
+
+# Length units in bohrs:
+Angstrom = 1 / 0.5291772  # Angstrom in bohrs
+meter = 1e10 * Angstrom  # meter in bohrs
+liter = 1e-3 * pow(meter, 3)  # liter in cubic bohrs
+
+# Mass units in electron masses:
+amu = 1822.88839  # atomic mass unit in electron masses
+kg = 1.0 / 9.10938291e-31  # kilogram in electron masses
+
+# Dimensionless:
+mol = 6.0221367e23  # mole in number (i.e. Avogadro number)
+
+# Commonly used derived units:
+Newton = Joule / meter  # Newton in Hartree/bohr
+Pascal = Newton / (meter * meter)  # Pascal in Hartree/bohr^3
+KPascal = 1000 * Pascal  # KPa in Hartree/bohr^3
+Bar = 100 * KPascal  # bar in Hartree/bohr^3
+mmHg = 133.322387415 * Pascal  # mm Hg in Hartree/bohr^3
+
+# Time
+sec = np.sqrt((kg * meter) / Newton)  # second in inverse Hartrees
+invSec = 1.0 / sec  # inverse second in Hartrees
+fs = sec * 1.0e-15  # femtosecond in inverse Hartrees
+
+# Electrical:
+Coul_ = Joule / eV  # Coulomb in electrons
+Volt = Joule / Coul_  # Volt in Hartrees
+Ampere = Coul_ / sec  # Ampere in electrons/inverse Hartree
+Ohm = Volt / Ampere  # Ohm in inverse conductance quanta
+
+# Magnetic:
+Tesla = Volt * sec / (meter * meter)  # Tesla in atomic units
+bohrMagneton = 0.5
+gElectron = 2.0023193043617  # electron gyromagnetic ratio
+
+# ??
+T = 298
+
+
+def antoinePvap(T: float, A: float, B: float, C: float) -> float:
+    """Calculate vapor pressure using Antoine equation.
+
+    Calculate vapor pressure using Antoine equation. Used for setting default Pvap of solvents.
+
+    Parameters:
+    ----------
+    T: float
+        Temperature in Kelvin.
+    A: float
+        Antoine coefficient A.
+    B: float
+        Antoine coefficient B.
+    C: float
+        Antoine coefficient C.
+
+    Returns:
+    -------
+    float
+        Vapor pressure in atm.
+    """
+    return KPascal * 10 ** (A - (B / (T + C)))  # in atm
+
+
+pureNbulk = {
+    "H2O": 4.9383e-3,
+    "CHCl3": 1.109e-3,
+    "CCl4": 9.205e-4,
+    "CH3CN": 1.709e-3,
+    "DMC": 1.059e-3,
+    "EC": 1.339e-3,
+    "PC": 1.039e-3,
+    "DMF": 1.153e-3,
+    "THF": 1.100e-3,
+    "EthylEther": 8.5e-4,
+    "Isobutanol": 9.668e-4,
+    "Chlorobenzene": 8.74e-4,
+    "CarbonDisulfide": 1.48e-3,
+    "DMSO": 1.256e-3,
+    "CH2Cl2": 1.392e-3,
+    "Ethanol": 1.528e-3,
+    "Methanol": 2.203e-3,
+    "Octanol": 5.646e-4,
+    "Glyme": 8.586e-4,
+    "EthyleneGlycol": 1.60e-3,
+}
+
+default_fluid_params = {
+    "H2O": {
+        "concentration": pureNbulk["H2O"] / (mol / liter),  # in mol/L
+        "epsBulk": 78.4,
+        "pMol": 0.92466,
+        "epsInf": 1.77,
+        "Pvap": antoinePvap(T, 7.31549, 1794.88, -34.764),
+        "sigmaBulk": 4.62e-05,
+        "Rvdw": 1.385 * Angstrom,
+        "Res": 1.42,
+        "poleEl": [
+            {
+                "omega0": 15.0,
+                "gamma0": 7.0,
+                "A0": 1.0,
+            },
+        ],
+    },
+    "CHCl3": {
+        "concentration": pureNbulk["CHCl3"] / (mol / liter),  # in mol/L
+        "epsBulk": 4.8069,
+        "pMol": 0.49091,
+        "epsInf": 2.09,
+        "Pvap": antoinePvap(T, 5.96288, 1106.94, -54.598),
+        "sigmaBulk": 1.71e-5,
+        "Rvdw": 2.53 * Angstrom,
+        "Res": 2.22,
+    },
+    "CCl4": {
+        "concentration": pureNbulk["CCl4"] / (mol / liter),  # in mol/L
+        "epsBulk": 2.238,
+        "pMol": 0.0,
+        "epsInf": 2.13,
+        "Pvap": antoinePvap(T, 6.10445, 1265.63, -41.002),
+        "sigmaBulk": 1.68e-5,
+        "Rvdw": 2.69 * Angstrom,
+        "Res": 1.90,
+    },
+    "CH3CN": {
+        "concentration": pureNbulk["CH3CN"] / (mol / liter),  # in mol/L
+        "epsBulk": 38.8,
+        "pMol": 1.89,
+        "epsInf": 1.81,
+        "Pvap": antoinePvap(T, 6.52111, 1492.375, -24.208),
+        "sigmaBulk": 1.88e-5,
+        "Rvdw": 2.12 * Angstrom,
+        "Res": 2.6,
+    },
+    "CH2Cl2": {
+        "concentration": pureNbulk["CH2Cl2"] / (mol / liter),  # in mol/L
+        "epsBulk": 9.08,
+        "pMol": 0.89,
+        "epsInf": 1.424,
+        # "Pvap": antoinePvap(T, 6.52111, 1492.375, -24.208),
+        "sigmaBulk": 1.70e-5,
+        # "Rvdw": 2.12*Angstrom,
+        # "Res": 2.6,
+    },
+    "Ethanol": {
+        "concentration": pureNbulk["Ethanol"] / (mol / liter),  # in mol/L
+        "epsBulk": 24.3,
+        "pMol": 0.76,
+        "epsInf": 1.361,
+        # "Pvap": antoinePvap(T, 6.52111, 1492.375, -24.208),
+        "sigmaBulk": 1.44e-5,
+        # "Rvdw": 2.12*Angstrom,
+        # "Res": 2.6,
+    },
+    "Methanol": {
+        "concentration": pureNbulk["Methanol"] / (mol / liter),  # in mol/L
+        "epsBulk": 32.66,
+        "pMol": 0.791,
+        "epsInf": 1.328,
+        # "Pvap": antoinePvap(T, 6.52111, 1492.375, -24.208),
+        "sigmaBulk": 1.445e-5,
+        # "Rvdw": 2.12*Angstrom,
+        # "Res": 2.6,
+    },
+    "Octanol": {
+        "concentration": pureNbulk["Octanol"] / (mol / liter),  # in mol/L
+        "epsBulk": 10.30,
+        "pMol": 0.661,
+        "epsInf": 2.036,
+        "Pvap": antoinePvap(T, 8.47682, 2603.359, -48.799),
+        "sigmaBulk": 1.766e-5,
+        "Rvdw": 3.348 * Angstrom,
+        # "Res": 2.6,
+    },
+    "DMC": {
+        "concentration": pureNbulk["DMC"] / (mol / liter),  # in mol/L
+        "epsBulk": 3.1,
+        "pMol": 0.16,
+        "epsInf": 1.87,
+        "Pvap": 18 * mmHg,
+        "sigmaBulk": 2.05e-5,
+    },
+    "EC": {
+        "concentration": pureNbulk["EC"] / (mol / liter),  # in mol/L
+        "epsBulk": 90.5,
+        "pMol": 2.88,
+        "epsInf": 2.00,
+        "Pvap": antoinePvap(T, 6.05764, 1705.267, -102.261),
+        "sigmaBulk": 3.51e-5,
+    },
+    "PC": {
+        "concentration": pureNbulk["PC"] / (mol / liter),  # in mol/L
+        "epsBulk": 64.0,
+        "pMol": 2.95,
+        "epsInf": 2.02,
+        "Pvap": antoinePvap(T, 6.20181, 1788.900, -88.715),
+        "sigmaBulk": 2.88e-5,
+    },
+    "DMF": {
+        "concentration": pureNbulk["DMF"] / (mol / liter),  # in mol/L
+        "epsBulk": 38.0,
+        "pMol": 2.19,
+        "epsInf": 2.05,
+        "Pvap": antoinePvap(T, 6.05286, 1400.86, -76.716),
+        "sigmaBulk": 2.26e-5,
+    },
+    "THF": {
+        "concentration": pureNbulk["THF"] / (mol / liter),  # in mol/L
+        "epsBulk": 7.6,
+        "pMol": 0.90,
+        "epsInf": 1.98,
+        "Pvap": antoinePvap(T, 6.12142, 1203.11, -46.795),
+        "sigmaBulk": 1.78e-5,
+    },
+    "DMSO": {
+        "concentration": pureNbulk["DMSO"] / (mol / liter),  # in mol/L
+        "epsBulk": 48.0,
+        "pMol": 1.56,
+        "epsInf": 2.19,
+        "sigmaBulk": 2.80e-5,
+        "Pvap": antoinePvap(T, 7.23039, 2239.161, -29.215),
+        "Rvdw": 2.378 * Angstrom,
+    },
+    "EthylEther": {
+        "concentration": pureNbulk["EthylEther"] / (mol / liter),  # in mol/L
+        "epsBulk": 4.34,
+        "pMol": 0.487,
+        "epsInf": 1.82,
+        "Pvap": antoinePvap(T, 6.96559, 1071.54, 227.774),
+        "sigmaBulk": 1.092e-5,
+    },
+    "Chlorobenzene": {
+        "concentration": pureNbulk["Chlorobenzene"] / (mol / liter),  # in mol/L
+        "epsBulk": 5.69,
+        "pMol": 0.72,
+        "epsInf": 2.32,
+        "Pvap": antoinePvap(T, 4.11083, 1435.675, -55.124),
+        "sigmaBulk": 2.1e-5,
+    },
+    "Isobutanol": {
+        "concentration": pureNbulk["Isobutanol"] / (mol / liter),  # in mol/L
+        "epsBulk": 17.93,
+        "pMol": 0.646,
+        "epsInf": 1.949,
+        "sigmaBulk": 1.445e-5,
+    },
+    "CarbonDisulfide": {
+        "concentration": pureNbulk["CarbonDisulfide"] / (mol / liter),  # in mol/L
+        "epsBulk": 2.641,
+        "epsInf": 2.641,
+        "pMol": 0.0,
+    },
+    "Glyme": {
+        "concentration": pureNbulk["Glyme"] / (mol / liter),  # in mol/L
+        "epsBulk": 7.20,
+        "epsInf": 1.90,
+        "pMol": 0.0,
+    },
+    "EthyleneGlycol": {
+        "concentration": pureNbulk["EthyleneGlycol"] / (mol / liter),  # in mol/L
+        "epsBulk": 41.4,
+        "epsInf": 1.43,
+        "pMol": 0.0,
+    },
+}
+
+
+empty_fluid_component = {
+    "epsBulk": 1.0,
+    "epsInf": 1.0,
+    "epsLJ": 0.0,
+    "Nnorm": 0,
+    "pMol": 0.0,
+    "poleEl": None,
+    "Pvap": 0.0,
+    "quad_nAlpha": 0,
+    "quad_nBeta": 0,
+    "quad_nGamma": 0,
+    "representation": "MuEps",
+    "Res": 0.0,
+    "Rvdw": 0.0,
+    "s2quadType": "7design24",
+    "sigmaBulk": 0.0,
+    "tauNuc": 8.3e3 * fs,
+    "translation": "LinearSpline",
 }

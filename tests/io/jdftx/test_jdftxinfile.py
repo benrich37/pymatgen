@@ -9,7 +9,7 @@ import pytest
 
 from pymatgen.core.structure import Site, Structure
 from pymatgen.io.jdftx.inputs import JDFTXInfile, JDFTXStructure, selective_dynamics_site_prop_to_jdftx_interpretable
-from pymatgen.io.jdftx.jdftxinfile_default_inputs import default_inputs
+from pymatgen.io.jdftx.jdftxinfile_default_inputs import antoinePvap, default_inputs
 from pymatgen.io.jdftx.jdftxinfile_master_format import get_tag_object
 
 from .inputs_test_utils import (
@@ -604,3 +604,7 @@ def test_jdftxinfile_comparison():
     assert not len(
         jif1.get_filtered_differing_tags(jif1copy, exclude_tag_categories=["electronic"])
     )  # Tag categories can be filtered out
+
+
+def test_antoine_pvap():
+    assert_same_value(antoinePvap(298, 7.31549, 1794.88, -34.764), 1.06736e-10)
