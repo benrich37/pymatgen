@@ -187,31 +187,6 @@ def fill_default_values(tag, cur_values):
     return ret_values
 
 
-# Angstrom = 1/0.5291772
-# meter = 1e10*Angstrom
-# Joule = 1/4.35974434e-18
-
-# Newton = Joule/meter
-# Pascal = Newton/(meter*meter)
-# KPascal = 1000*Pascal
-# liter = 1e-3*(meter**3)
-# mol = 6.0221367e23
-# #
-# Angstrom = 1/0.5291772
-# meter = 1e10*Angstrom
-# Joule = 1/4.35974434e-18
-# Newton = Joule/meter
-# Pascal = Newton/(meter*meter)
-# KPascal = 1000*Pascal
-# T = 298
-# eV = 1/27.21138505
-# Ryd = 0.5
-# Kelvin = 1.3806488e-23*Joule
-
-# kg = 1./9.10938291e-31
-# sec = np.sqrt((kg*meter)/Newton)
-# fs = sec*1.0e-15
-
 # Energy, temperature units in Hartrees:
 eV = 1 / 27.21138505  # eV in Hartrees
 Ryd = 0.5  # Rydberg in Hartrees
