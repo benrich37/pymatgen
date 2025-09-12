@@ -289,8 +289,6 @@ def test_disordered_structures():
     struct = jif.structure
     # Making a disordered structure by replacing some sites with partial occupancies
     struct.sites[1] = Site(species={"Si": 0.5, "Ge": 0.5}, coords=struct.sites[1].frac_coords)
-    # struct[0] = struct[0].replace(species={"Si": 0.5, "Ge": 0.5})
-    # struct[1] = struct[1].replace(species={"Si": 0.75, "Ge": 0.25})
     with pytest.raises(
         ValueError, match="Disordered structure with partial occupancies cannot be converted into JDFTXStructure!"
     ):

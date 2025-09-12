@@ -241,14 +241,6 @@ class JDFTXInfile(dict, MSONable):
             JDFTXInfile: The created JDFTXInfile object.
         """
         _structure = structure.copy()
-        # if (selective_dynamics is None and not ignore_site_properties) and (
-        #     _structure.site_properties.get("selective_dynamics") is not None
-        # ):
-        #     selective_dynamics = _structure.site_properties["selective_dynamics"]
-        # if (velocities is None and not ignore_site_properties) and (
-        #     _structure.site_properties.get("velocities") is not None
-        # ):
-        #     velocities = _structure.site_properties["velocities"]
         if ignore_site_properties:
             _structure.site_properties = {}
         jdftxstructure = JDFTXStructure(

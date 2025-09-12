@@ -718,7 +718,6 @@ class InitMagMomTag(AbstractTag):
 
     def _is_equal_to(self, val1, obj2, val2):
         return True  # TODO: We still need to actually implement initmagmom as a multi-format tag
-        # raise NotImplementedError("equality not yet implemented for InitMagMomTag")
 
 
 @dataclass
