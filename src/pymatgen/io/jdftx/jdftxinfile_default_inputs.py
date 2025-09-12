@@ -340,10 +340,7 @@ default_fluid_params = {
         "epsBulk": 9.08,
         "pMol": 0.89,
         "epsInf": 1.424,
-        # "Pvap": antoinePvap(T, 6.52111, 1492.375, -24.208),
         "sigmaBulk": 1.70e-5,
-        # "Rvdw": 2.12*Angstrom,
-        # "Res": 2.6,
     },
     "Ethanol": {
         "concentration": pureNbulk["Ethanol"] / (mol / liter),  # in mol/L
@@ -351,10 +348,7 @@ default_fluid_params = {
         "epsBulk": 24.3,
         "pMol": 0.76,
         "epsInf": 1.361,
-        # "Pvap": antoinePvap(T, 6.52111, 1492.375, -24.208),
         "sigmaBulk": 1.44e-5,
-        # "Rvdw": 2.12*Angstrom,
-        # "Res": 2.6,
     },
     "Methanol": {
         "concentration": pureNbulk["Methanol"] / (mol / liter),  # in mol/L
@@ -362,10 +356,7 @@ default_fluid_params = {
         "epsBulk": 32.66,
         "pMol": 0.791,
         "epsInf": 1.328,
-        # "Pvap": antoinePvap(T, 6.52111, 1492.375, -24.208),
         "sigmaBulk": 1.445e-5,
-        # "Rvdw": 2.12*Angstrom,
-        # "Res": 2.6,
     },
     "Octanol": {
         "concentration": pureNbulk["Octanol"] / (mol / liter),  # in mol/L
