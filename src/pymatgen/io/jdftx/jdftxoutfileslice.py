@@ -905,11 +905,15 @@ class JDFTXOutfileSlice:
         # In the case where no ion optimization updates are printed, JOutStructures
         if self.geom_opt_type is None:
             raise ValueError("geom_opt_type not set yet.")
+        expected_etype = "F"
+        if "target-mu" in self.infile:
+            expected_etype = "G"
         self.jstrucs = JOutStructures._from_out_slice(
             text,
             opt_type=self.geom_opt_label,
             init_struc=self.initial_structure,
             is_md=self.is_md,
+            expected_etype=expected_etype,
         )
         if self.etype is None:
             self.etype = self.jstrucs[-1].etype

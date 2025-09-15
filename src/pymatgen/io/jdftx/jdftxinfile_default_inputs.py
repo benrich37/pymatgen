@@ -178,13 +178,21 @@ default_inputs = {
 }
 
 
-def fill_default_values(tag, cur_values):
-    default_values = default_inputs.get(tag)
-    if (default_values is None) or (not isinstance(default_values, dict)):
-        return cur_values
-    ret_values = default_values.copy()
-    ret_values.update(cur_values)
-    return ret_values
+def fill_default_values(tag: str, infile_dict: dict):
+    if "fluid-" not in tag:
+        default_values = default_inputs.get(tag)
+        if (default_values is None) or (not isinstance(default_values, dict)):
+            return infile_dict
+        ret_values = default_values.copy()
+        ret_values.update(infile_dict)
+        return ret_values
+    return None
+
+
+# def fill_default_fluid_component_values(tag, infile_dict: dict):
+#     T = 298
+#     if "fluid" in infile_dict and "T" in infile_dict["fluid"]:
+#         T = infile_dict["fluid"]["T"]
 
 
 # Energy, temperature units in Hartrees:

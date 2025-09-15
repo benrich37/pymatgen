@@ -157,6 +157,7 @@ class JOutStructures:
         opt_type: str = "IonicMinimize",
         init_struc: Structure | None = None,
         is_md: bool = False,
+        expected_etype: str | None = None,
     ) -> JOutStructures:
         """
         Return JStructures object.
@@ -173,7 +174,9 @@ class JOutStructures:
         if opt_type not in ["IonicMinimize", "LatticeMinimize"]:
             _opt_type = correct_geom_opt_type(opt_type)
         start_idx = _get_joutstructures_start_idx(out_slice)
-        slices = _get_joutstructure_list(out_slice[start_idx:], opt_type, init_structure=init_struc, is_md=is_md)
+        slices = _get_joutstructure_list(
+            out_slice[start_idx:], opt_type, init_structure=init_struc, is_md=is_md, expected_etype=expected_etype
+        )
         return cls(slices=slices)
 
     def __post_init__(self):
@@ -392,6 +395,7 @@ def _get_joutstructure_list(
     init_structure: Structure | None = None,
     is_md: bool = False,
     skip_error_structures: bool = True,
+    expected_etype: str | None = None,
 ) -> list[JOutStructure]:
     """Return list of JOutStructure objects.
 
@@ -429,6 +433,7 @@ def _get_joutstructure_list(
                 init_structure=init_structure,
                 opt_type=opt_type,
                 is_md=is_md,
+                expected_etype=expected_etype,
             )
         except (ValueError, IndexError, TypeError, KeyError, AttributeError):
             if (not i == len(out_bounds) - 1) and (not skip_error_structures):

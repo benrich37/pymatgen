@@ -338,6 +338,7 @@ class JOutStructure(Structure):
         emin_flag: str = "---- Electronic minimization -------",
         init_structure: Structure | None = None,
         is_md: bool = False,
+        expected_etype: str | None = None,
     ) -> JOutStructure:
         """
         Return JOutStructure object.
@@ -374,6 +375,8 @@ class JOutStructure(Structure):
         instance.opt_type = opt_type
         instance.emin_flag = emin_flag
         instance.is_md = is_md
+        if expected_etype is not None:
+            instance.etype = expected_etype
         line_collections = instance._init_line_collections()
         line_collections = instance._gather_line_collections(line_collections, text_slice)
 
