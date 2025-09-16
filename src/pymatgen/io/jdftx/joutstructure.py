@@ -89,6 +89,7 @@ class JOutStructure(Structure):
 
     opt_type: str | None = None
     etype: str | None = None
+    backup_etype: str = "Etot"
     eopt_type: str | None = None
     emin_flag: str | None = None
     ecomponents: dict | None = None
@@ -570,7 +571,17 @@ class JOutStructure(Structure):
                 raise ValueError("eopt_type is not set")
             if self.etype is None:
                 raise ValueError("etype is not set")
-            self.elecmindata = JElSteps._from_text_slice(emin_lines, opt_type=self.eopt_type, etype=self.etype)
+            emindata = None
+            try:
+                emindata = JElSteps._from_text_slice(emin_lines, opt_type=self.eopt_type, etype=self.etype)
+            except TypeError:
+                pass
+            if emindata is not None:
+                self.elecmindata = emindata
+            else:
+                self.elecmindata = JElSteps._from_text_slice(
+                    emin_lines, opt_type=self.eopt_type, etype=self.backup_etype
+                )
         else:
             if self.eopt_type is None:
                 raise ValueError("eopt_type is not set")
@@ -865,6 +876,8 @@ class JOutStructure(Structure):
                     nstep = int(_nstep)
                     self.nstep = nstep
                     en = get_colon_val(line, f"{self.etype}:")
+                    if en is None:
+                        en = get_colon_val(line, f"{self.backup_etype}:")
                     self.e = en * Ha_to_eV
                     grad_k = get_colon_val(line, "|grad|_K: ")
                     self.grad_k = grad_k

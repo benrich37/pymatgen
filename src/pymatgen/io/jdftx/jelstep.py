@@ -350,7 +350,6 @@ class JElSteps:
         slices = [JElStep._from_lines_collect(_lines_collect, opt_type, etype) for _lines_collect in line_collections]
         converged = None
         converged_reason = None
-
         if len(lines_collect):
             converged, converged_reason = _parse_ending_lines(lines_collect, opt_type)
         instance = cls(slices=slices, converged=converged, converged_reason=converged_reason)
