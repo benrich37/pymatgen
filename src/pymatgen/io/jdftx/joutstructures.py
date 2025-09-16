@@ -171,8 +171,9 @@ class JOutStructures:
         Returns:
             JOutStructures: The created JOutStructures object.
         """
-        if opt_type not in ["IonicMinimize", "LatticeMinimize"]:
-            _opt_type = correct_geom_opt_type(opt_type)
+        # Is this needed? I don't think any users are personally initializing this class.
+        if opt_type not in ["IonicMinimize", "LatticeMinimize", "IonicDynamics"]:
+            opt_type = correct_geom_opt_type(opt_type)
         start_idx = _get_joutstructures_start_idx(out_slice)
         slices = _get_joutstructure_list(
             out_slice[start_idx:], opt_type, init_structure=init_struc, is_md=is_md, expected_etype=expected_etype

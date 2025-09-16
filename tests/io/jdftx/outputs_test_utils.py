@@ -293,6 +293,8 @@ problem2_outfile_known_simple = {
     "mu": 0.464180124 * Ha_to_eV,
 }
 
+problem3_outfile_path = ex_out_files_dir / Path("problem3.out")
+
 etot_etype_outfile_path = ex_out_files_dir / Path("etot_etype.out")
 etot_etype_outfile_known_simple = {
     "e": -17.265553748795949 * Ha_to_eV,

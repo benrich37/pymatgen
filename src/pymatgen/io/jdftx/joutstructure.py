@@ -369,7 +369,7 @@ class JOutStructure(Structure):
                 coords_are_cartesian=True,
                 coords=init_structure.cart_coords,
                 site_properties=init_structure.site_properties,
-            )
+            )  # Below is redundant
         if opt_type not in ["IonicMinimize", "LatticeMinimize", "IonicDynamics"]:
             opt_type = correct_geom_opt_type(opt_type)
         instance.eopt_type = eopt_type

@@ -538,6 +538,8 @@ def _parse_ending_lines(ending_lines: list[str], opt_type: str) -> tuple[None | 
     for i, line in enumerate(ending_lines):
         if _is_converged_line(i, line, opt_type):
             converged, converged_reason = _read_converged_line(line)
+        elif _is_stopping_line(i, line, opt_type):
+            converged, converged_reason = _read_stopping_line(line, opt_type)
     return converged, converged_reason
 
 
@@ -558,6 +560,23 @@ def _is_converged_line(i: int, line_text: str, opt_type: str) -> bool:
     return f"{opt_type}: Converged" in line_text
 
 
+def _is_stopping_line(i: int, line_text: str, opt_type: str) -> bool:
+    """Return True if stopping line.
+
+    Return True if the line_text is the start of a log message about
+    stopping for a JDFTx optimization step.
+
+    Args:
+        i (int): The index of the line in the text slice.
+        line_text (str): A line of text from a JDFTx out file.
+
+    Returns:
+        bool: True if the line_text is the start of a log message about
+        stopping for a JDFTx optimization step.
+    """
+    return f"{opt_type}:" in line_text and "Stopping" in line_text
+
+
 def _read_converged_line(line_text: str) -> tuple[None | bool, None | str]:
     """Set class variables converged and converged_reason.
 
@@ -567,4 +586,18 @@ def _read_converged_line(line_text: str) -> tuple[None | bool, None | str]:
     """
     converged = True
     converged_reason = line_text.split("(")[1].split(")")[0].strip()
+    return converged, converged_reason
+
+
+def _read_stopping_line(line_text: str, opt_type: str) -> tuple[None | bool, None | str]:
+    """Set class variables converged and converged_reason.
+
+    Args:
+        line_text (str): A line of text from a JDFTx out file containing a message about
+        stopping for a JDFTx optimization step.
+    """
+    converged = False
+    converged_reason = line_text.split(f"{opt_type}:")[1].split("Stopping")[0].rstrip("(").strip()
+    if "roundoff" in converged_reason:
+        converged = True
     return converged, converged_reason

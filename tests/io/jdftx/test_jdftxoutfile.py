@@ -36,6 +36,7 @@ from .outputs_test_utils import (
     partial_lattice_init_outfile_path,
     problem2_outfile_known_simple,
     problem2_outfile_path,
+    problem3_outfile_path,
 )
 from .shared_test_utils import assert_same_value
 
@@ -171,3 +172,7 @@ def test_outfile_to_infile(outfile_path: Path, infile_path: Path, outfile_known:
     # TODO: Do the old TODO related to filling out default input tags so the robust comparison below
     # can be used instead of the above.
     # assert new_infile.is_comparable_to(jdftxinfile, exclude_tags=["ion", "thermostat-velocity", "dump"])
+
+
+def test_deleteme():
+    JDFTXOutfile.from_file(problem3_outfile_path)
