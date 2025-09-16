@@ -533,7 +533,7 @@ def _parse_ending_lines(ending_lines: list[str], opt_type: str) -> tuple[None | 
         ending_lines (list[str]): The ending lines of text from a JDFTx out file corresponding to a
         series of SCF steps.
     """
-    converged = None
+    converged = False
     converged_reason = None
     for i, line in enumerate(ending_lines):
         if _is_converged_line(i, line, opt_type):
@@ -577,7 +577,7 @@ def _is_stopping_line(i: int, line_text: str, opt_type: str) -> bool:
     return f"{opt_type}:" in line_text and "Stopping" in line_text
 
 
-def _read_converged_line(line_text: str) -> tuple[None | bool, None | str]:
+def _read_converged_line(line_text: str) -> tuple[bool, None | str]:
     """Set class variables converged and converged_reason.
 
     Args:
@@ -589,7 +589,7 @@ def _read_converged_line(line_text: str) -> tuple[None | bool, None | str]:
     return converged, converged_reason
 
 
-def _read_stopping_line(line_text: str, opt_type: str) -> tuple[None | bool, None | str]:
+def _read_stopping_line(line_text: str, opt_type: str) -> tuple[bool, None | str]:
     """Set class variables converged and converged_reason.
 
     Args:

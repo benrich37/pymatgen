@@ -25,7 +25,7 @@ from pymatgen.core.periodic_table import Element
 from pymatgen.core.trajectory import Trajectory
 from pymatgen.core.units import Ha_to_eV, ang_to_bohr, bohr_to_ang
 from pymatgen.io.jdftx._output_utils import (
-    _init_dict_from_colon_dump_lines,
+    _get_eigstats_varsdict,
     find_all_key,
     find_first_range_key,
     find_key,
@@ -671,7 +671,7 @@ class JDFTXOutfileSlice:
             return None
         return [int(x) for x in text[line].split()[1:4]]
 
-    def _get_eigstats_varsdict(self, text: list[str], prefix: str | None) -> dict[str, float | None]:
+    def _get_eigstats_varsdict(self, text: list[str]) -> dict[str, float | None]:
         """Get the eigenvalue statistics from the out file text.
 
         Args:
@@ -681,24 +681,8 @@ class JDFTXOutfileSlice:
         Returns:
             dict[str, float | None]: Dictionary of eigenvalue statistics.
         """
-        varsdict: dict[str, float | None] = {}
-        lines1 = find_all_key("Dumping ", text)
-        lines2 = find_all_key("eigStats' ...", text)
-        lines3 = [lines1[i] for i in range(len(lines1)) if lines1[i] in lines2]
-        if not lines3:
-            for key in list(eigstats_keymap.keys()):
-                varsdict[eigstats_keymap[key]] = None
-            self.has_eigstats = False
-        else:
-            line_start = lines3[-1]
-            line_start_rel_idx = lines1.index(line_start)
-            line_end = lines1[line_start_rel_idx + 1] if len(lines1) >= line_start_rel_idx + 2 else len(lines1) - 1
-            _varsdict = _init_dict_from_colon_dump_lines([text[idx] for idx in range(line_start, line_end)])
-            for key in _varsdict:
-                varsdict[eigstats_keymap[key]] = float(_varsdict[key]) * Ha_to_eV
-            self.has_eigstats = all(eigstats_keymap[key] in varsdict for key in eigstats_keymap) and all(
-                eigstats_keymap[key] is not None for key in eigstats_keymap
-            )
+        has_eigstats, varsdict = _get_eigstats_varsdict(text)
+        self.has_eigstats = has_eigstats
         return varsdict
 
     def _set_eigvars(self, text: list[str]) -> None:
@@ -707,7 +691,7 @@ class JDFTXOutfileSlice:
         Args:
             text (list[str]): Output of read_file for out file.
         """
-        eigstats = self._get_eigstats_varsdict(text, self.prefix)
+        eigstats = self._get_eigstats_varsdict(text)
         for key, val in eigstats.items():
             setattr(self, key, val)
         if self.efermi is None:

@@ -71,7 +71,7 @@ def test_get_rho_cutoff():
 
 def test_get_eigstats_varsdict():
     joutslice = JDFTXOutfileSlice._from_out_slice(ex_slice1)
-    evardict = joutslice._get_eigstats_varsdict([], "$VAR")
+    evardict = joutslice._get_eigstats_varsdict([])
     for key in evardict:
         assert evardict[key] is None
     # Initializing eigvars with no data will set all to None EXCEPT efermi which has "mu" as a backup reference
