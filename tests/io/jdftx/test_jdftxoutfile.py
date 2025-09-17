@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pytest
 
+from pymatgen.core.units import Ha_to_eV
 from pymatgen.io.jdftx._output_utils import read_outfile_slices
 from pymatgen.io.jdftx.inputs import JDFTXInfile
 from pymatgen.io.jdftx.jdftxoutfileslice import JDFTXOutfileSlice
@@ -174,5 +175,11 @@ def test_outfile_to_infile(outfile_path: Path, infile_path: Path, outfile_known:
     # assert new_infile.is_comparable_to(jdftxinfile, exclude_tags=["ion", "thermostat-velocity", "dump"])
 
 
-def test_deleteme():
-    JDFTXOutfile.from_file(problem3_outfile_path)
+def test_etot_bug_handling():
+    outfile = JDFTXOutfile.from_file(problem3_outfile_path)
+    assert len(outfile.slices) == 1
+    assert len(outfile.slices[-1].jstrucs.slices) == 7
+    # The first ionic step in this outfile has the etot bug
+    assert outfile.slices[-1].jstrucs.slices[0].etype == "F"
+    assert "F" not in outfile.slices[-1].jstrucs.slices[0].ecomponents
+    assert_same_value(outfile.slices[-1].jstrucs.slices[0].e, -3.018425965201787 * Ha_to_eV)

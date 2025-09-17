@@ -336,6 +336,11 @@ example_aimd_outfile_known_site_properties = {
     * bohr_to_ang
 }
 
+ex_unconv_emin_slice_fname = ex_out_file_sections_dir / "ex_unconv_emin_slice"
+with open(ex_unconv_emin_slice_fname, encoding="utf-8") as f:
+    ex_unconv_emin_slice = list.copy(list(f))
+ex_unconv_emin_slice_known = {"converged": False, "converged_reason": "|grad|_K=-nan."}
+
 
 ex_outfileslice1_fname = ex_out_file_sections_dir / "ex_out_slice_latmin"
 ex_outfileslice2_fname = ex_out_file_sections_dir / "ex_out_slice_ionmin"
