@@ -7,9 +7,9 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 import pytest
 
-from pymatgen.core.structure import Structure
-from pymatgen.io.jdftx.inputs import JDFTXInfile, JDFTXStructure
-from pymatgen.io.jdftx.jdftxinfile_default_inputs import default_inputs
+from pymatgen.core.structure import Site, Structure
+from pymatgen.io.jdftx.inputs import JDFTXInfile, JDFTXStructure, selective_dynamics_site_prop_to_jdftx_interpretable
+from pymatgen.io.jdftx.jdftxinfile_default_inputs import antoinePvap, default_inputs
 from pymatgen.io.jdftx.jdftxinfile_master_format import get_tag_object
 
 from .inputs_test_utils import (
@@ -264,23 +264,69 @@ def test_JDFTXInfile_knowns_simple(infile_fname: PathLike, knowns: dict):
 def test_jdftxstructure():
     """Test the JDFTXStructure object associated with the JDFTXInfile object"""
     jif = JDFTXInfile.from_file(ex_infile2_fname)
-    struct = jif.to_jdftxstructure(jif)
-    assert isinstance(struct, JDFTXStructure)
-    struc_str = str(struct)
+    jstruct = jif.to_jdftxstructure(jif)
+    assert isinstance(jstruct, JDFTXStructure)
+    struc_str = str(jstruct)
     assert isinstance(struc_str, str)
     newstruct = JDFTXStructure.from_str(struc_str)
     assert isinstance(newstruct, JDFTXStructure)
     # Double checking I got the column/row order right
-    assert_same_value(struct.structure.lattice, newstruct.structure.lattice)
-    assert struct.natoms == 16
+    assert_same_value(jstruct.structure.lattice, newstruct.structure.lattice)
+    assert jstruct.natoms == 16
     with open(ex_infile2_fname) as f:
         lines = list.copy(list(f))
     # Test different ways of creating a JDFTXStructure object create the same object if data is the same
     data = "\n".join(lines)
     struct2 = JDFTXStructure.from_str(data)
-    assert_equiv_jdftxstructure(struct, struct2)
-    struct3 = JDFTXStructure.from_dict(struct.as_dict())
-    assert_equiv_jdftxstructure(struct, struct3)
+    assert_equiv_jdftxstructure(jstruct, struct2)
+    struct3 = JDFTXStructure.from_dict(jstruct.as_dict())
+    assert_equiv_jdftxstructure(jstruct, struct3)
+
+
+def test_disordered_structures():
+    """Test that disordered structures are handled correctly"""
+    jif = JDFTXInfile.from_file(ex_infile2_fname)
+    struct = jif.structure
+    # Making a disordered structure by replacing some sites with partial occupancies
+    struct.sites[1] = Site(species={"Si": 0.5, "Ge": 0.5}, coords=struct.sites[1].frac_coords)
+    with pytest.raises(
+        ValueError, match="Disordered structure with partial occupancies cannot be converted into JDFTXStructure!"
+    ):
+        JDFTXStructure(structure=struct)
+
+
+def test_jdftxstructure_infile_site_properties_conversion():
+    """Test conversions related to going back and forth between JDFTXInfile and JDFTXStructure/Structure"""
+    jif = JDFTXInfile.from_file(ex_infile2_fname)
+    jif["ion"][0]["moveScale"] = 0
+    jif["ion"][1]["moveScale"] = 1
+    for i in range(len(jif["ion"])):
+        jif["ion"][i]["v"] = {"vx0": 0.0, "vx1": 0.0, "vx2": 0.0}
+    jif["ion"][3]["v"] = {"vx0": 1.0, "vx1": 2.0, "vx2": 3.0}
+    jstruct = jif.to_jdftxstructure(jif)
+    struct = jif.structure
+    jif_from_jstruc = JDFTXInfile.from_jdftxstructure(jstruct)
+    # Since velocities and moveScale are compatible to be stored as site properties, exporting to
+    # `Structure` will save them in `Structure.site_properties`. Initializing a new JDFTXInfile
+    # from this `Structure` should yield the same result as `jif_from_jstruc`.
+    jif_from_struc = JDFTXInfile.from_structure(struct)
+    # Providing a site property as an argument will override the site property in the Structure, however
+    # the format for 'selective_dynamics' in `Structure.site_properties` is not the same as that expected
+    # by JDFTXInfile.
+    # Testing here that the wrong format can be properly mapped in the JDFTx 'moveScale' format.
+    jif_from_struc_2 = JDFTXInfile.from_structure(
+        struct, selective_dynamics=struct.site_properties["selective_dynamics"]
+    )
+    # Providing selective dynamics in the JDFTx expected format should also work
+    jif_from_struc_3 = JDFTXInfile.from_structure(
+        struct,
+        selective_dynamics=selective_dynamics_site_prop_to_jdftx_interpretable(
+            struct.site_properties["selective_dynamics"]
+        ),
+    )
+    for jif2 in [jif_from_jstruc, jif_from_struc, jif_from_struc_2, jif_from_struc_3]:
+        assert isinstance(jif2, JDFTXInfile)
+        assert_idential_jif(jif["ion"], jif2["ion"])
 
 
 def test_pmg_struc():
@@ -558,3 +604,7 @@ def test_jdftxinfile_comparison():
     assert not len(
         jif1.get_filtered_differing_tags(jif1copy, exclude_tag_categories=["electronic"])
     )  # Tag categories can be filtered out
+
+
+def test_antoine_pvap():
+    assert_same_value(antoinePvap(298, 7.31549, 1794.88, -34.764), 1.06736e-10)

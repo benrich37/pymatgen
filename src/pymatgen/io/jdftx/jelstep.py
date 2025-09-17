@@ -62,6 +62,7 @@ class JElStep:
     subspacerotationadjust: float | np.float64 | None = None
     converged: bool = False
     converged_reason: str | None = None
+    unread_data: dict[str, Any] = field(default_factory=dict, init=True)
 
     @classmethod
     def _from_lines_collect(cls, lines_collect: list[str], opt_type: str, etype: str) -> JElStep:
@@ -116,6 +117,12 @@ class JElStep:
         Args:
             line_text (str): A line of text from a JDFTx out file containing the electronic minimization data.
         """
+        # data = _parse_all_generic(line_text)
+        # # Quickly fail so JOutStructure can handle Etot parsing
+        # self.e = float(data[f"{self.etype}"]) * Ha_to_eV
+        # data.pop(f"{self.etype}")
+        # self.unread_data["Iter"] = parse_data_generic(data, self)
+        ########
         nstep_float = get_colon_val(line_text, "Iter: ")
         if isinstance(nstep_float, float):
             self.nstep = int(nstep_float)
@@ -350,7 +357,6 @@ class JElSteps:
         slices = [JElStep._from_lines_collect(_lines_collect, opt_type, etype) for _lines_collect in line_collections]
         converged = None
         converged_reason = None
-
         if len(lines_collect):
             converged, converged_reason = _parse_ending_lines(lines_collect, opt_type)
         instance = cls(slices=slices, converged=converged, converged_reason=converged_reason)
@@ -534,11 +540,13 @@ def _parse_ending_lines(ending_lines: list[str], opt_type: str) -> tuple[None | 
         ending_lines (list[str]): The ending lines of text from a JDFTx out file corresponding to a
         series of SCF steps.
     """
-    converged = None
+    converged = False
     converged_reason = None
     for i, line in enumerate(ending_lines):
         if _is_converged_line(i, line, opt_type):
             converged, converged_reason = _read_converged_line(line)
+        elif _is_stopping_line(i, line, opt_type):
+            converged, converged_reason = _read_stopping_line(line, opt_type)
     return converged, converged_reason
 
 
@@ -559,7 +567,24 @@ def _is_converged_line(i: int, line_text: str, opt_type: str) -> bool:
     return f"{opt_type}: Converged" in line_text
 
 
-def _read_converged_line(line_text: str) -> tuple[None | bool, None | str]:
+def _is_stopping_line(i: int, line_text: str, opt_type: str) -> bool:
+    """Return True if stopping line.
+
+    Return True if the line_text is the start of a log message about
+    stopping for a JDFTx optimization step.
+
+    Args:
+        i (int): The index of the line in the text slice.
+        line_text (str): A line of text from a JDFTx out file.
+
+    Returns:
+        bool: True if the line_text is the start of a log message about
+        stopping for a JDFTx optimization step.
+    """
+    return f"{opt_type}:" in line_text and "Stopping" in line_text
+
+
+def _read_converged_line(line_text: str) -> tuple[bool, None | str]:
     """Set class variables converged and converged_reason.
 
     Args:
@@ -569,3 +594,52 @@ def _read_converged_line(line_text: str) -> tuple[None | bool, None | str]:
     converged = True
     converged_reason = line_text.split("(")[1].split(")")[0].strip()
     return converged, converged_reason
+
+
+def _read_stopping_line(line_text: str, opt_type: str) -> tuple[bool, None | str]:
+    """Set class variables converged and converged_reason.
+
+    Args:
+        line_text (str): A line of text from a JDFTx out file containing a message about
+        stopping for a JDFTx optimization step.
+    """
+    converged = False
+    converged_reason = line_text.split(f"{opt_type}:")[1].split("Stopping")[0].rstrip("(").strip()
+    if "roundoff" in converged_reason:
+        converged = True
+    return converged, converged_reason
+
+
+attr_map = {
+    "|grad|_K": "grad_k",
+    "Abs": "abs_magneticmoment",
+    "Tot": "tot_magneticmoment",
+    "t[s]": "t_s",
+    "Iter": "nstep",
+}
+
+int_attrs = ["Iter"]
+float_attrs = ["|grad|_K", "alpha", "linmin", "t[s]", "Abs", "Tot"]
+
+
+def parse_data_generic(data: dict[str, str], obj: Any) -> dict[str, Any]:
+    """Parse data from a dictionary of strings to a dictionary of appropriate types.
+
+    Set attributes of an object from a dictionary of strings to a dictionary of appropriate types.
+    Returns a dictionary of unread data.
+
+    Args:
+        data (dict[str, str]): A dictionary of strings not yet parsed.
+    """
+    to_pop = []
+    for key, value in data.items():
+        if key in int_attrs:
+            if key in data:
+                setattr(obj, attr_map.get(key, key), int(value))
+                to_pop.append(key)
+        elif key in float_attrs and key in data:
+            setattr(obj, attr_map.get(key, key), float(value))
+            to_pop.append(key)
+    for key in to_pop:
+        data.pop(key)
+    return data

@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any, TypeAlias
 
 import numpy as np
 
+from pymatgen.core.units import Ha_to_eV
 from pymatgen.electronic_structure.core import Orbital
 
 if TYPE_CHECKING:
@@ -766,3 +767,59 @@ def _get_orb_label_list(bandfile_filepath: Path) -> tuple[str, ...]:
     if len(labels_list) != _get_orb_label_list_expected_len(labels_dict, atom_count_list):
         raise RuntimeError("Number of atomic orbital projections does not match expected length.")
     return tuple(labels_list)
+
+
+eigstats_keymap = {
+    "eMin": "emin",
+    "HOMO": "homo",
+    "mu": "efermi",
+    "LUMO": "lumo",
+    "eMax": "emax",
+    "HOMO-LUMO gap": "egap",
+    "Optical gap": "optical_egap",
+}
+
+
+def _get_eigstats_varsdict(text: list[str]) -> tuple[bool, dict[str, float | None]]:
+    """Get the eigenvalue statistics from the out file text.
+
+    Args:
+        text (list[str]): Output of read_file for out file.
+        prefix (str): Prefix for the eigStats section in the out file.
+
+    Returns:
+        dict[str, float | None]: Dictionary of eigenvalue statistics.
+    """
+    has_eigstats = False
+    varsdict: dict[str, float | None] = {}
+    lines1 = find_all_key("Dumping ", text)
+    lines2 = find_all_key("eigStats' ...", text)
+    lines3 = [lines1[i] for i in range(len(lines1)) if lines1[i] in lines2]
+    if not lines3:
+        for key in list(eigstats_keymap.keys()):
+            varsdict[eigstats_keymap[key]] = None
+        has_eigstats = False
+    else:
+        line_start = lines3[-1]
+        line_start_rel_idx = lines1.index(line_start)
+        line_end = lines1[line_start_rel_idx + 1] if len(lines1) >= line_start_rel_idx + 2 else len(lines1) - 1
+        _varsdict = _init_dict_from_colon_dump_lines([text[idx] for idx in range(line_start, line_end)])
+        for key in _varsdict:
+            varsdict[eigstats_keymap[key]] = float(_varsdict[key]) * Ha_to_eV
+        has_eigstats = all(eigstats_keymap[key] in varsdict for key in eigstats_keymap) and all(
+            eigstats_keymap[key] is not None for key in eigstats_keymap
+        )
+    return has_eigstats, varsdict
+
+
+def _parse_all_generic(line: str) -> dict[str, str]:
+    """Parse a line with key: value pairs, where values can contain spaces."""
+    _pieces = line.strip().split()
+    sig_idcs = [i for i, piece in enumerate(_pieces) if ":" in piece]
+    data = {}
+    for i, sig_idx in enumerate(sig_idcs):
+        key = _pieces[sig_idx].replace(":", "")
+        value_pieces = _pieces[sig_idx + 1 : sig_idcs[i + 1]] if i < len(sig_idcs) - 1 else _pieces[sig_idx + 1 :]
+        value_str = " ".join(value_pieces)
+        data[key] = value_str
+    return data

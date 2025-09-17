@@ -89,6 +89,7 @@ class JOutStructure(Structure):
 
     opt_type: str | None = None
     etype: str | None = None
+    backup_etype: str = "Etot"
     eopt_type: str | None = None
     emin_flag: str | None = None
     ecomponents: dict | None = None
@@ -128,7 +129,7 @@ class JOutStructure(Structure):
     elec_linmin: float | np.float64 | None = None
     structure: Structure | None = None
     is_md: bool = False
-    thermostat_velocity: np.ndarray | None = None
+    # thermostat_velocity: np.ndarray | None = None
     _velocities: list[NDArray[np.float64] | None] | None = None
     _constraint_vectors: list[NDArray[np.float64] | list[NDArray[np.float64]] | None] | None = None
     _constraint_types: list[str | None] | None = None
@@ -338,6 +339,7 @@ class JOutStructure(Structure):
         emin_flag: str = "---- Electronic minimization -------",
         init_structure: Structure | None = None,
         is_md: bool = False,
+        expected_etype: str | None = None,
     ) -> JOutStructure:
         """
         Return JOutStructure object.
@@ -367,13 +369,15 @@ class JOutStructure(Structure):
                 coords_are_cartesian=True,
                 coords=init_structure.cart_coords,
                 site_properties=init_structure.site_properties,
-            )
+            )  # Below is redundant
         if opt_type not in ["IonicMinimize", "LatticeMinimize", "IonicDynamics"]:
             opt_type = correct_geom_opt_type(opt_type)
         instance.eopt_type = eopt_type
         instance.opt_type = opt_type
         instance.emin_flag = emin_flag
         instance.is_md = is_md
+        if expected_etype is not None:
+            instance.etype = expected_etype
         line_collections = instance._init_line_collections()
         line_collections = instance._gather_line_collections(line_collections, text_slice)
 
@@ -567,7 +571,17 @@ class JOutStructure(Structure):
                 raise ValueError("eopt_type is not set")
             if self.etype is None:
                 raise ValueError("etype is not set")
-            self.elecmindata = JElSteps._from_text_slice(emin_lines, opt_type=self.eopt_type, etype=self.etype)
+            emindata = None
+            try:
+                emindata = JElSteps._from_text_slice(emin_lines, opt_type=self.eopt_type, etype=self.etype)
+            except TypeError:
+                pass
+            if emindata is not None:
+                self.elecmindata = emindata
+            else:
+                self.elecmindata = JElSteps._from_text_slice(
+                    emin_lines, opt_type=self.eopt_type, etype=self.backup_etype
+                )
         else:
             if self.eopt_type is None:
                 raise ValueError("eopt_type is not set")
@@ -720,6 +734,7 @@ class JOutStructure(Structure):
                 posns = np.dot(posns, self.lattice.matrix)
             else:
                 posns *= bohr_to_ang
+                velocities = [v * bohr_to_ang if v is not None else None for v in velocities]
             for i in range(natoms):
                 self.append(species=names[i], coords=posns[i], coords_are_cartesian=True)
             self.selective_dynamics = selective_dynamics
@@ -861,6 +876,8 @@ class JOutStructure(Structure):
                     nstep = int(_nstep)
                     self.nstep = nstep
                     en = get_colon_val(line, f"{self.etype}:")
+                    if en is None:
+                        en = get_colon_val(line, f"{self.backup_etype}:")
                     self.e = en * Ha_to_eV
                     grad_k = get_colon_val(line, "|grad|_K: ")
                     self.grad_k = grad_k
@@ -894,8 +911,12 @@ class JOutStructure(Structure):
                     nstep = int(_nstep)
                     self.nstep = nstep
                     self.t_s = get_colon_val(line, "t[s]: ")
-                    self.pe = get_colon_val(line, "PE:") * Ha_to_eV
-                    self.ke = get_colon_val(line, "KE:") * Ha_to_eV
+                    self.pe = get_colon_val(line, "PE:")
+                    if self.pe is not None:
+                        self.pe *= Ha_to_eV
+                    self.ke = get_colon_val(line, "KE:")
+                    if self.ke is not None:
+                        self.ke *= Ha_to_eV
                     self.t_k = get_colon_val(line, "T[K]:")
                     self.p_bar = get_colon_val(line, "P[Bar]:")
                     self.tmd_fs = get_colon_val(line, "tMD[fs]:")
@@ -974,7 +995,6 @@ class JOutStructure(Structure):
             "stress": self.stress,
             "kinetic_stress": self.kinetic_stress,
             "strain": self.strain,
-            "thermostat_velocity": self.thermostat_velocity,
         }
 
     def _init_structure(self) -> None:

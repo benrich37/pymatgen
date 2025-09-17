@@ -23,12 +23,6 @@ if TYPE_CHECKING:
 
 from .shared_test_utils import assert_same_value
 
-# def write_mt_file(fname: str, write_dir: Path = dump_files_dir):
-#     filepath = write_dir / fname
-#     with open(filepath, "w", encoding="utf-8") as f:
-#         f.write("if you're reading this yell at ben")
-#     f.close()
-
 
 def object_hasall_known_simple(obj: Any, knowndict: dict):
     for k in knowndict:
@@ -191,7 +185,7 @@ example_sp_outfile_known_simple = {
     "total_electrons": 288.0,
     "nbands": 174,
     "nat": 16,
-    "t_s": 165.87,
+    "t_s": 172.27,
     "geom_opt_type": "single point",
     "prefix": "jdft",
     "etype": "F",
@@ -299,6 +293,8 @@ problem2_outfile_known_simple = {
     "mu": 0.464180124 * Ha_to_eV,
 }
 
+problem3_outfile_path = ex_out_files_dir / Path("problem3.out")
+
 etot_etype_outfile_path = ex_out_files_dir / Path("etot_etype.out")
 etot_etype_outfile_known_simple = {
     "e": -17.265553748795949 * Ha_to_eV,
@@ -317,6 +313,33 @@ partial_lattice_init_outfile_known_lattice = {
     "21": 0.000000000000000 * bohr_to_ang,
     "22": 54.648857000000000 * bohr_to_ang,
 }
+
+example_aimd_outfile_path = ex_out_files_dir / Path("aimd.out")
+example_aimd_outfile_known = {
+    "pe": -34.553161 * Ha_to_eV,
+    "ke": 0.017444 * Ha_to_eV,
+    "t_k": 734.471,
+    "tmd_fs": 8.0,
+    "thermostat_velocity": np.array([7.67441e-05, -7.03861e-05, -7.67953e-05]),
+}
+example_aimd_outfile_known_site_properties = {
+    "velocities": np.array(
+        [
+            [0.000002035167337, 0.000006710845585, -0.000009153140010],
+            [-0.000017137645979, -0.000004228325150, -0.000027044902216],
+            [0.000056326799826, 0.000043089977920, -0.000003483419824],
+            [-0.000001044716224, -0.000002906020894, 0.000015838806389],
+            [-0.000016645139281, 0.000027157649820, 0.000009553044130],
+            [-0.000023534465678, -0.000069824127281, 0.000014289611531],
+        ]
+    )
+    * bohr_to_ang
+}
+
+ex_unconv_emin_slice_fname = ex_out_file_sections_dir / "ex_unconv_emin_slice"
+with open(ex_unconv_emin_slice_fname, encoding="utf-8") as f:
+    ex_unconv_emin_slice = list.copy(list(f))
+ex_unconv_emin_slice_known = {"converged": False, "converged_reason": "|grad|_K=-nan."}
 
 
 ex_outfileslice1_fname = ex_out_file_sections_dir / "ex_out_slice_latmin"

@@ -54,6 +54,12 @@ _joss_atrs_from_last_slice = (
     "selective_dynamics",
     "structure",
     "t_s",
+    "pe",
+    "ke",
+    "t_k",
+    "p_bar",
+    "tmd_fs",
+    "thermostat_velocity",
 )
 
 
@@ -146,7 +152,12 @@ class JOutStructures:
 
     @classmethod
     def _from_out_slice(
-        cls, out_slice: list[str], opt_type: str = "IonicMinimize", init_struc: Structure | None = None
+        cls,
+        out_slice: list[str],
+        opt_type: str = "IonicMinimize",
+        init_struc: Structure | None = None,
+        is_md: bool = False,
+        expected_etype: str | None = None,
     ) -> JOutStructures:
         """
         Return JStructures object.
@@ -160,10 +171,13 @@ class JOutStructures:
         Returns:
             JOutStructures: The created JOutStructures object.
         """
-        if opt_type not in ["IonicMinimize", "LatticeMinimize"]:
-            _opt_type = correct_geom_opt_type(opt_type)
+        # Is this needed? I don't think any users are personally initializing this class.
+        if opt_type not in ["IonicMinimize", "LatticeMinimize", "IonicDynamics"]:
+            opt_type = correct_geom_opt_type(opt_type)
         start_idx = _get_joutstructures_start_idx(out_slice)
-        slices = _get_joutstructure_list(out_slice[start_idx:], opt_type, init_structure=init_struc)
+        slices = _get_joutstructure_list(
+            out_slice[start_idx:], opt_type, init_structure=init_struc, is_md=is_md, expected_etype=expected_etype
+        )
         return cls(slices=slices)
 
     def __post_init__(self):
@@ -176,9 +190,10 @@ class JOutStructures:
         for var in _joss_atrs_from_last_slice:
             val = None
             for i in range(1, len(self.slices) + 1):
-                val = getattr(self.slices[-i], var)
-                if val is not None:
-                    break
+                if hasattr(self.slices[-i], var):
+                    val = getattr(self.slices[-i], var)
+                    if val is not None:
+                        break
             setattr(self, var, val)
         self.initial_structure = self._get_initial_structure()
         self.t_s = self._get_t_s()
@@ -379,6 +394,9 @@ def _get_joutstructure_list(
     out_slice: list[str],
     opt_type: str | None,
     init_structure: Structure | None = None,
+    is_md: bool = False,
+    skip_error_structures: bool = True,
+    expected_etype: str | None = None,
 ) -> list[JOutStructure]:
     """Return list of JOutStructure objects.
 
@@ -387,7 +405,10 @@ def _get_joutstructure_list(
 
     Args:
         out_slice (list[str]): A slice of a JDFTx out file (individual call of JDFTx).
+        opt_type (str | None): Flag string indicating optimization type.
         init_structure (Structure | None): The initial structure if available, otherwise None.
+        is_md (bool): True if the calculation is a molecular dynamics (MD) simulation, False otherwise.
+        skip_error_structures (bool): If True, skip any structures that raise errors during parsing.
 
     Returns:
         list[JOutStructure]: The list of JOutStructure objects.
@@ -398,7 +419,9 @@ def _get_joutstructure_list(
         # This case should only be called if no optimization steps are found to avoid errors down the line.
         # If this is changed to always be the first structure, logic down the line on what is considered
         # a "single point" calculation will be broken.
-        joutstructure_list.append(JOutStructure._from_text_slice([], init_structure=init_structure, opt_type=opt_type))
+        joutstructure_list.append(
+            JOutStructure._from_text_slice([], init_structure=init_structure, opt_type=opt_type, is_md=is_md)
+        )
     for i, bounds in enumerate(out_bounds):
         if i > 0:
             init_structure = joutstructure_list[-1]
@@ -410,9 +433,11 @@ def _get_joutstructure_list(
                 out_slice[bounds[0] : bounds[1]],
                 init_structure=init_structure,
                 opt_type=opt_type,
+                is_md=is_md,
+                expected_etype=expected_etype,
             )
         except (ValueError, IndexError, TypeError, KeyError, AttributeError):
-            if not i == len(out_bounds) - 1:
+            if (not i == len(out_bounds) - 1) and (not skip_error_structures):
                 raise
         if joutstructure is not None:
             joutstructure_list.append(joutstructure)

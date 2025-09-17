@@ -160,6 +160,7 @@ class JDFTXOutputs:
         self._store_vars()
         self._init_bandstructure()
 
+    @staticmethod
     def _check_store_vars(store_vars: list[str] | None) -> list[str]:
         if store_vars is None:
             return []
@@ -410,6 +411,12 @@ _jof_atr_from_last_slice = (
     "infile",
     "vibrational_modes",
     "vibrational_energy_components",
+    "pe",
+    "ke",
+    "t_k",
+    "p_bar",
+    "tmd_fs",
+    "thermostat_velocity",
 )
 
 # TODO: Remove references to the deprecated 'jsettings_*' attributes in `JDFTXOutfile` and `JDFTXOutfileSlice`

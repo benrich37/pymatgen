@@ -817,7 +817,7 @@ jdftxfluid_subtagdict = {
     "quad_nAlpha": FloatTag(),
     "quad_nBeta": FloatTag(),
     "quad_nGamma": FloatTag(),
-    "representation": TagContainer(subtags={"MuEps": FloatTag(), "Pomega": FloatTag(), "PsiAlpha": FloatTag()}),
+    "representation": StrTag(options=["MuEps", "Pomega", "PsiAlpha"]),
     "Res": FloatTag(lb=0.0, lb_incl=False),
     "Rvdw": FloatTag(lb=0.0, lb_incl=False),
     "s2quadType": StrTag(
