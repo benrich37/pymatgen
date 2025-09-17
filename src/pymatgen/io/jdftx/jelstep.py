@@ -62,6 +62,7 @@ class JElStep:
     subspacerotationadjust: float | np.float64 | None = None
     converged: bool = False
     converged_reason: str | None = None
+    unread_data: dict[str, Any] = field(default_factory=dict, init=True)
 
     @classmethod
     def _from_lines_collect(cls, lines_collect: list[str], opt_type: str, etype: str) -> JElStep:
@@ -116,6 +117,12 @@ class JElStep:
         Args:
             line_text (str): A line of text from a JDFTx out file containing the electronic minimization data.
         """
+        # data = _parse_all_generic(line_text)
+        # # Quickly fail so JOutStructure can handle Etot parsing
+        # self.e = float(data[f"{self.etype}"]) * Ha_to_eV
+        # data.pop(f"{self.etype}")
+        # self.unread_data["Iter"] = parse_data_generic(data, self)
+        ########
         nstep_float = get_colon_val(line_text, "Iter: ")
         if isinstance(nstep_float, float):
             self.nstep = int(nstep_float)
@@ -601,3 +608,38 @@ def _read_stopping_line(line_text: str, opt_type: str) -> tuple[bool, None | str
     if "roundoff" in converged_reason:
         converged = True
     return converged, converged_reason
+
+
+attr_map = {
+    "|grad|_K": "grad_k",
+    "Abs": "abs_magneticmoment",
+    "Tot": "tot_magneticmoment",
+    "t[s]": "t_s",
+    "Iter": "nstep",
+}
+
+int_attrs = ["Iter"]
+float_attrs = ["|grad|_K", "alpha", "linmin", "t[s]", "Abs", "Tot"]
+
+
+def parse_data_generic(data: dict[str, str], obj: Any) -> dict[str, Any]:
+    """Parse data from a dictionary of strings to a dictionary of appropriate types.
+
+    Set attributes of an object from a dictionary of strings to a dictionary of appropriate types.
+    Returns a dictionary of unread data.
+
+    Args:
+        data (dict[str, str]): A dictionary of strings not yet parsed.
+    """
+    to_pop = []
+    for key, value in data.items():
+        if key in int_attrs:
+            if key in data:
+                setattr(obj, attr_map.get(key, key), int(value))
+                to_pop.append(key)
+        elif key in float_attrs and key in data:
+            setattr(obj, attr_map.get(key, key), float(value))
+            to_pop.append(key)
+    for key in to_pop:
+        data.pop(key)
+    return data

@@ -6,7 +6,7 @@ import os
 
 import pytest
 
-from pymatgen.io.jdftx._output_utils import find_first_range_key, get_start_lines
+from pymatgen.io.jdftx._output_utils import _parse_all_generic, find_first_range_key, get_start_lines
 from pymatgen.io.jdftx.joutstructures import _get_joutstructures_start_idx
 from pymatgen.io.jdftx.outputs import _find_jdftx_out_file
 
@@ -86,3 +86,18 @@ def test_find_jdftx_out_file(tmp_path):
     write_mt_file(tmp_path, "tinyout.out")
     with pytest.raises(FileNotFoundError, match="Multiple JDFTx out files found in directory."):
         _find_jdftx_out_file(tmp_path)
+
+
+def test_parse_all_generic():
+    ex_line = (
+        r"FillingsUpdate:  mu: +0.025844210  nElectrons: 515.000000  magneticMoment: [ Abs: 4.60583  Tot: -1.00000 ]"
+    )
+    ex_out = {
+        "FillingsUpdate": "",
+        "mu": "+0.025844210",
+        "nElectrons": "515.000000",
+        "magneticMoment": "[",
+        "Abs": "4.60583",
+        "Tot": "-1.00000 ]",
+    }
+    assert _parse_all_generic(ex_line) == ex_out
