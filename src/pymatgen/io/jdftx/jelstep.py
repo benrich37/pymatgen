@@ -123,6 +123,9 @@ class JElStep:
         # data.pop(f"{self.etype}")
         # self.unread_data["Iter"] = parse_data_generic(data, self)
         ########
+        # Quickly fail so JOutStructure can handle Etot parsing
+        if f"{self.etype}: " not in line_text:
+            raise RuntimeError(f"Could not find {self.etype} in line_text")
         nstep_float = get_colon_val(line_text, "Iter: ")
         if isinstance(nstep_float, float):
             self.nstep = int(nstep_float)
@@ -342,7 +345,13 @@ class JElSteps:
         raise AttributeError("No JElStep objects in JElSteps object slices class variable.")
 
     @classmethod
-    def _from_text_slice(cls, text_slice: list[str], opt_type: str = "ElecMinimize", etype: str = "F") -> JElSteps:
+    def _from_text_slice(
+        cls,
+        text_slice: list[str],
+        opt_type: str = "ElecMinimize",
+        etype: str = "F",
+        skim_levels: list[str] | None = None,
+    ) -> JElSteps:
         """Return JElSteps object.
 
         Create a JElSteps object from a slice of an out file's text
@@ -354,7 +363,21 @@ class JElSteps:
             etype (str): The type of energy component.
         """
         line_collections, lines_collect = _gather_JElSteps_line_collections(opt_type, text_slice)
-        slices = [JElStep._from_lines_collect(_lines_collect, opt_type, etype) for _lines_collect in line_collections]
+        slices = []
+        if skim_levels is not None and "elec" in skim_levels:
+            eslice = None
+            for _lines_collect in line_collections[::-1]:
+                try:
+                    eslice = JElStep._from_lines_collect(_lines_collect, opt_type, etype)
+                except (ValueError, IndexError, TypeError, KeyError, AttributeError):
+                    pass  # Do not pass on assertion error - needed for Etot parsing in JOutStructure
+                if eslice is not None:
+                    slices.append(eslice)
+                    break
+        else:
+            slices = [
+                JElStep._from_lines_collect(_lines_collect, opt_type, etype) for _lines_collect in line_collections
+            ]
         converged = None
         converged_reason = None
         if len(lines_collect):

@@ -334,7 +334,7 @@ class JDFTXOutfileSlice:
     # information as possible.
     @classmethod
     def _from_out_slice(
-        cls, text: list[str], is_bgw: bool = False, none_on_error: bool = True
+        cls, text: list[str], is_bgw: bool = False, none_on_error: bool = True, skim_levels: list[str] | None = None
     ) -> JDFTXOutfileSlice | None:
         """
         Read slice of out file into a JDFTXOutfileSlice instance.
@@ -351,18 +351,18 @@ class JDFTXOutfileSlice:
         instance = cls()
         instance.is_bgw = is_bgw
         try:
-            instance._from_out_slice_init_all(text)
+            instance._from_out_slice_init_all(text, skim_levels=skim_levels)
         except (ValueError, IndexError, TypeError, KeyError, AttributeError):
             if none_on_error:
                 return None
             raise
         return instance
 
-    def _from_out_slice_init_all(self, text: list[str]) -> None:
+    def _from_out_slice_init_all(self, text: list[str], skim_levels: list[str] | None = None) -> None:
         self._set_internal_infile(text)
         # self._set_min_settings(text)
         self._set_geomopt_vars(text)
-        self._set_jstrucs(text)
+        self._set_jstrucs(text, skim_levels=skim_levels)
         self._set_backup_vars(text)
         self.prefix = self._get_prefix(text)
         spintype, nspin = self._get_spinvars(text)
@@ -877,7 +877,7 @@ class JDFTXOutfileSlice:
             raise ValueError("Provided out file slice's inputs preamble does not contain input structure data.")
         return init_struc
 
-    def _set_jstrucs(self, text: list[str]) -> None:
+    def _set_jstrucs(self, text: list[str], skim_levels: list[str] | None = None) -> None:
         """Set the jstrucs class variable.
 
         Set the JStructures object to jstrucs from the out file text and all class attributes initialized from jstrucs.
@@ -898,6 +898,7 @@ class JDFTXOutfileSlice:
             init_struc=self.initial_structure,
             is_md=self.is_md,
             expected_etype=expected_etype,
+            skim_levels=skim_levels,
         )
         if self.etype is None:
             self.etype = self.jstrucs[-1].etype

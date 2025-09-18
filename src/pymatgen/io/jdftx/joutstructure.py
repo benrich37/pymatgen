@@ -19,14 +19,9 @@ if TYPE_CHECKING:
 
     from pymatgen.util.typing import CompositionLike
 
-from pymatgen.core.structure import Lattice, Structure
+from pymatgen.core.structure import Element, Lattice, Species, Structure
 from pymatgen.core.units import Ha_to_eV, bohr_to_ang
-from pymatgen.io.jdftx._output_utils import (
-    _brkt_list_of_3x3_to_nparray,
-    correct_geom_opt_type,
-    get_colon_val,
-    is_lowdin_start_line,
-)
+from pymatgen.io.jdftx._output_utils import _brkt_list_of_3x3_to_nparray, get_colon_val, is_lowdin_start_line
 from pymatgen.io.jdftx.jelstep import JElSteps
 
 __author__ = "Ben Rich"
@@ -340,6 +335,7 @@ class JOutStructure(Structure):
         init_structure: Structure | None = None,
         is_md: bool = False,
         expected_etype: str | None = None,
+        skim_levels: list[str] | None = None,
     ) -> JOutStructure:
         """
         Return JOutStructure object.
@@ -360,18 +356,19 @@ class JOutStructure(Structure):
         Returns:
             JOutStructure: The created JOutStructure object.
         """
+        # cur_species: Sequence[Element | Species] | None = None
         if init_structure is None:
-            instance = cls(lattice=np.eye(3), species=[], coords=[], site_properties={})
+            cur_species: Sequence[Element | Species] = []
+            instance = cls(lattice=np.eye(3), species=cur_species, coords=[], site_properties={})
         else:
+            cur_species = init_structure.species
             instance = cls(
                 lattice=init_structure.lattice.matrix,
-                species=init_structure.species,
+                species=cur_species,
                 coords_are_cartesian=True,
                 coords=init_structure.cart_coords,
                 site_properties=init_structure.site_properties,
-            )  # Below is redundant
-        if opt_type not in ["IonicMinimize", "LatticeMinimize", "IonicDynamics"]:
-            opt_type = correct_geom_opt_type(opt_type)
+            )
         instance.eopt_type = eopt_type
         instance.opt_type = opt_type
         instance.emin_flag = emin_flag
@@ -387,13 +384,13 @@ class JOutStructure(Structure):
             instance._parse_md_opt_lines(line_collections["opt"]["lines"])
         else:
             instance._parse_opt_lines(line_collections["opt"]["lines"])
-        instance._parse_emin_lines(line_collections["emin"]["lines"])
+        instance._parse_emin_lines(line_collections["emin"]["lines"], skim_levels=skim_levels)
         # Lattice must be parsed before posns/forces in case of direct coordinates
         instance._parse_lattice_lines(line_collections["lattice"]["lines"])
         # Posns must be parsed before forces and lowdin analysis so that they can be stored in site_properties
-        instance._parse_posns_lines(line_collections["posns"]["lines"])
+        cur_species = instance._parse_posns_lines(line_collections["posns"]["lines"], cur_species)
         instance._parse_forces_lines(line_collections["forces"]["lines"])
-        instance._parse_lowdin_lines(line_collections["lowdin"]["lines"])
+        instance._parse_lowdin_lines(line_collections["lowdin"]["lines"], cur_species)
         # Can be parsed at any point
         instance._parse_strain_lines(line_collections["strain"]["lines"])
         instance._parse_stress_lines(line_collections["stress"]["lines"])
@@ -406,7 +403,7 @@ class JOutStructure(Structure):
         # Set relevant properties in self.properties
         instance._fill_properties()
         # Done last in case of any changes to site-properties
-        instance._init_structure()
+        instance._init_structure(cur_species)
         return instance
 
     def _init_e_sp_backup(self) -> None:
@@ -557,7 +554,7 @@ class JOutStructure(Structure):
         """
         self.etype = self._get_etype_from_emin_lines(emin_lines)
 
-    def _parse_emin_lines(self, emin_lines: list[str]) -> None:
+    def _parse_emin_lines(self, emin_lines: list[str], skim_levels: list[str] | None = None) -> None:
         """Parse electronic minimization lines.
 
         Args:
@@ -573,14 +570,16 @@ class JOutStructure(Structure):
                 raise ValueError("etype is not set")
             emindata = None
             try:
-                emindata = JElSteps._from_text_slice(emin_lines, opt_type=self.eopt_type, etype=self.etype)
-            except TypeError:
+                emindata = JElSteps._from_text_slice(
+                    emin_lines, opt_type=self.eopt_type, etype=self.etype, skim_levels=skim_levels
+                )
+            except RuntimeError:  # Wrong etype detected by assertion error
                 pass
             if emindata is not None:
                 self.elecmindata = emindata
             else:
                 self.elecmindata = JElSteps._from_text_slice(
-                    emin_lines, opt_type=self.eopt_type, etype=self.backup_etype
+                    emin_lines, opt_type=self.eopt_type, etype=self.backup_etype, skim_levels=skim_levels
                 )
         else:
             if self.eopt_type is None:
@@ -674,19 +673,23 @@ class JOutStructure(Structure):
         else:
             self.thermostat_velocity = None
 
-    def _check_for_structure_consistency(self, names: list[str]) -> bool:
+    def _check_for_structure_consistency(
+        self, names: list[str], cur_species: Sequence[Element | Species]
+    ) -> bool:  # This is very expensive apparently (19 seconds out of 67.5 seconds)
         # If JOutStructure was constructed with a reference init_structure
-        if len(self.species):
-            if len(names) != len(self.species):
+        if len(cur_species):
+            if len(names) != len(cur_species):
                 return False
             _names = list(set(names))
-            _self_names = [s.symbol for s in self.species]
+            _self_names = [s.symbol for s in cur_species]
             for _name in _names:
                 if names.count(_name) != _self_names.count(_name):
                     return False
         return True
 
-    def _parse_posns_lines(self, posns_lines: list[str]) -> None:
+    def _parse_posns_lines(
+        self, posns_lines: list[str], cur_species: Sequence[Element | Species]
+    ) -> Sequence[Element | Species]:
         """Parse positions lines.
 
         Parse the lines of text corresponding to the positions of a
@@ -700,7 +703,7 @@ class JOutStructure(Structure):
             the name of the element, and sd is a flag indicating whether the ion is
             excluded from optimization (1) or not (0).
         """
-        self.copy()
+        new_species: None | list[Element | Species] = None
         if len(posns_lines):
             coords_type = posns_lines[0].split("positions in")[1]
             coords_type = coords_type.strip().split()[0].strip()
@@ -724,11 +727,11 @@ class JOutStructure(Structure):
                 constraint_types.append(constraint_type)
                 constraint_vectors.append(constraint_vector)
                 group_names_list.append(group_names)
-            is_good = self._check_for_structure_consistency(names)
-            if not is_good and len(self.species):
+            is_good = self._check_for_structure_consistency(names, cur_species)
+            if not is_good and len(cur_species):
                 # Abort structure updating if we have a pre-existing structure
-                return
-            self.remove_sites(list(range(len(self.species))))
+                return cur_species
+            self.remove_sites(list(range(len(cur_species))))
             posns = np.array(_posns)
             if coords_type.lower() != "cartesian":
                 posns = np.dot(posns, self.lattice.matrix)
@@ -742,6 +745,9 @@ class JOutStructure(Structure):
             self.constraint_types = constraint_types
             self.constraint_vectors = constraint_vectors
             self.group_names = group_names_list
+            # Calling `self.species` is fairly expensive, so we create in manually like this to save compute time
+            new_species = [Element(name) for name in names]
+        return new_species if new_species is not None else cur_species
 
     def _parse_forces_lines(self, forces_lines: list[str]) -> None:
         """Parse forces lines.
@@ -790,7 +796,7 @@ class JOutStructure(Structure):
         if key is not None and (self.etype is None) and (key in ["F", "G", "Etot"]):
             self.etype = key
 
-    def _parse_lowdin_lines(self, lowdin_lines: list[str]) -> None:
+    def _parse_lowdin_lines(self, lowdin_lines: list[str], cur_species: Sequence[Element | Species]) -> None:
         """Parse Lowdin lines.
 
         Parse the lines of text corresponding to a Lowdin population analysis
@@ -806,7 +812,7 @@ class JOutStructure(Structure):
                 charges_dict = self._parse_lowdin_line(line, charges_dict)
             elif _is_magnetic_moments_line(line):
                 moments_dict = self._parse_lowdin_line(line, moments_dict)
-        names = [s.name for s in self.species]
+        names = [s.name for s in cur_species]
         charges = None
         moments = None
         if len(charges_dict):
@@ -997,11 +1003,11 @@ class JOutStructure(Structure):
             "strain": self.strain,
         }
 
-    def _init_structure(self) -> None:
+    def _init_structure(self, cur_species: Sequence[Element | Species]) -> None:
         """Initialize structure attribute."""
         self.structure = Structure(
             lattice=self.lattice,
-            species=self.species,
+            species=cur_species,
             coords=self.cart_coords,
             site_properties=self.site_properties,
             coords_are_cartesian=True,

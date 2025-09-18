@@ -158,6 +158,7 @@ class JOutStructures:
         init_struc: Structure | None = None,
         is_md: bool = False,
         expected_etype: str | None = None,
+        skim_levels: list[str] | None = None,
     ) -> JOutStructures:
         """
         Return JStructures object.
@@ -176,7 +177,12 @@ class JOutStructures:
             opt_type = correct_geom_opt_type(opt_type)
         start_idx = _get_joutstructures_start_idx(out_slice)
         slices = _get_joutstructure_list(
-            out_slice[start_idx:], opt_type, init_structure=init_struc, is_md=is_md, expected_etype=expected_etype
+            out_slice[start_idx:],
+            opt_type,
+            init_structure=init_struc,
+            is_md=is_md,
+            expected_etype=expected_etype,
+            skim_levels=skim_levels,
         )
         return cls(slices=slices)
 
@@ -397,6 +403,7 @@ def _get_joutstructure_list(
     is_md: bool = False,
     skip_error_structures: bool = True,
     expected_etype: str | None = None,
+    skim_levels: list[str] | None = None,
 ) -> list[JOutStructure]:
     """Return list of JOutStructure objects.
 
@@ -422,23 +429,56 @@ def _get_joutstructure_list(
         joutstructure_list.append(
             JOutStructure._from_text_slice([], init_structure=init_structure, opt_type=opt_type, is_md=is_md)
         )
+    if skim_levels is not None and "geom" in skim_levels:
+        for bounds in out_bounds[::-1]:
+            joutstructure = parse_joutstructure_bounds(
+                init_structure, out_slice, bounds, opt_type, is_md, expected_etype, skim_levels, raise_on_error=False
+            )
+            if joutstructure is not None:
+                joutstructure_list.append(joutstructure)
+                break
+        return joutstructure_list
     for i, bounds in enumerate(out_bounds):
         if i > 0:
             init_structure = joutstructure_list[-1]
-        joutstructure = None
         # The final out_slice slice is protected by the try/except block, as this slice has a high
         # chance of being empty or malformed.
-        try:
-            joutstructure = JOutStructure._from_text_slice(
-                out_slice[bounds[0] : bounds[1]],
-                init_structure=init_structure,
-                opt_type=opt_type,
-                is_md=is_md,
-                expected_etype=expected_etype,
-            )
-        except (ValueError, IndexError, TypeError, KeyError, AttributeError):
-            if (not i == len(out_bounds) - 1) and (not skip_error_structures):
-                raise
+        joutstructure = parse_joutstructure_bounds(
+            init_structure,
+            out_slice,
+            bounds,
+            opt_type,
+            is_md,
+            expected_etype,
+            skim_levels,
+            raise_on_error=((i != len(out_bounds) - 1) and (not skip_error_structures)),
+        )
         if joutstructure is not None:
             joutstructure_list.append(joutstructure)
     return joutstructure_list
+
+
+def parse_joutstructure_bounds(
+    init_structure,
+    out_slice,
+    bounds,
+    opt_type: str | None,
+    is_md: bool,
+    expected_etype: str | None,
+    skim_levels: list[str] | None,
+    raise_on_error: bool,
+) -> JOutStructure | None:
+    joutstructure = None
+    try:
+        joutstructure = JOutStructure._from_text_slice(
+            out_slice[bounds[0] : bounds[1]],
+            init_structure=init_structure,
+            opt_type=opt_type,
+            is_md=is_md,
+            expected_etype=expected_etype,
+            skim_levels=skim_levels,
+        )
+    except (ValueError, IndexError, TypeError, KeyError, AttributeError):
+        if raise_on_error:
+            raise
+    return joutstructure

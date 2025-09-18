@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from itertools import combinations
+from time import time
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -31,6 +33,8 @@ from .outputs_test_utils import (
     example_vib_outfile_path,
     jdftxoutfile_fromfile_matches_known,
     jdftxoutfile_fromfile_matches_known_simple,
+    jdftxoutfile_matches_known,
+    jdftxoutfile_matches_known_simple,
     noeigstats_outfile_known_simple,
     noeigstats_outfile_path,
     partial_lattice_init_outfile_known_lattice,
@@ -55,6 +59,85 @@ if TYPE_CHECKING:
 )
 def test_JDFTXOutfile_fromfile(filename: Path, known: dict):
     jdftxoutfile_fromfile_matches_known(filename, known)
+
+
+@pytest.mark.parametrize(
+    ("filename", "known", "known_simple"),
+    [
+        (example_sp_outfile_path, example_sp_outfile_known, example_sp_outfile_known_simple),
+        (example_latmin_outfile_path, example_latmin_outfile_known, example_latmin_outfile_known_simple),
+        (example_ionmin_outfile_path, example_ionmin_outfile_known, example_ionmin_outfile_known_simple),
+    ],
+)
+def test_JDFTXOutfile_skimming(filename: Path, known: dict, known_simple: dict):
+    # Time parsing the out file in regular mode
+    start1 = time()
+    jof_full = JDFTXOutfile.from_file(filename)
+    time_full = time() - start1
+    # Count how minimum fewer objects can be read at each depth level
+    nless_outslices = len(jof_full.slices) - 1
+    nless_last_geom = len(jof_full.slices[-1].jstrucs.slices) - 1
+    nless_last_elec = len(jof_full.slices[-1].jstrucs.slices[-1].elecmindata.slices) - 1
+    skim_level_options = ["outfile", "geom", "elec"]
+    # Don't run outfile depth skimming test if only one slice
+    if not nless_outslices > 0:
+        skim_level_options.remove("outfile")
+    # Generate all combinations of skim level depths to test
+    skim_levelss: list[tuple[str, ...]] = []
+    for r in range(1, len(skim_level_options) + 1):
+        skim_levelss.extend(combinations(skim_level_options, r))
+    levels_time_tested = 0
+    time_save_logs = []
+    for skim_levels in skim_levelss:
+        # Time parsing the out file in skimmed mode
+        skim_start = time()
+        jof_skim = JDFTXOutfile.from_file(filename, skim_levels=skim_levels)
+        skim_time = time() - skim_start
+        # Check that the skimmed version matches the full version where it should
+        jdftxoutfile_matches_known(jof_skim, known)
+        jdftxoutfile_matches_known_simple(jof_skim, known_simple)
+        # Make sure skim levels are correctly applied
+        if "outfile" in skim_levels:
+            assert len(jof_skim.slices) == 1
+        if "geom" in skim_levels:
+            for oslice in jof_skim.slices:
+                assert len(oslice.jstrucs.slices) == 1
+        if "elec" in skim_levels:
+            for oslice in jof_skim.slices:
+                for gslice in oslice.jstrucs.slices:
+                    assert len(gslice.elecmindata.slices) == 1
+        # Make sure less objects are being read before testing speedup
+        less_outfile_slices_read = nless_outslices if "outfile" in skim_levels else 0
+        less_geom_slices_read = nless_last_geom if "geom" in skim_levels else 0
+        less_elec_slices_read = nless_last_elec if "elec" in skim_levels else 0
+        less_sum = less_outfile_slices_read + less_geom_slices_read + less_elec_slices_read
+        if less_sum > 0:
+            time_save_info = [
+                filename.name,
+                skim_levels,
+                time_full,
+                skim_time,
+                less_outfile_slices_read,
+                less_geom_slices_read,
+                less_elec_slices_read,
+            ]
+            assert skim_time < time_full, time_save_info
+            levels_time_tested += 1
+            time_save_logs.append(time_save_info)
+            time_save_info = [
+                filename.name,
+                skim_levels,
+                time_full,
+                skim_time,
+                less_outfile_slices_read,
+                less_geom_slices_read,
+                less_elec_slices_read,
+            ]
+            assert skim_time < time_full
+            levels_time_tested += 1
+            time_save_logs.append(time_save_info)
+    assert levels_time_tested > 0, "No skim levels tested - likely an error in test code."
+    print(time_save_logs)
 
 
 @pytest.mark.parametrize(

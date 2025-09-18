@@ -55,7 +55,9 @@ class AbstractTag(ClassPrintFormatter, ABC):
     allow_list_representation: bool = False  # if True, allow this tag to exist as a list or list of lists
 
     @abstractmethod
-    def validate_value_type(self, tag: str, value: Any, try_auto_type_fix: bool = False) -> tuple[str, bool, Any]:
+    def validate_value_type(
+        self, tag: str, value: Any, try_auto_type_fix: bool = False, warn_user: bool = True
+    ) -> tuple[str, bool, Any]:
         """Validate the type of the value for this tag.
 
         Args:
@@ -119,7 +121,7 @@ class AbstractTag(ClassPrintFormatter, ABC):
         return isinstance(self, type(obj2))
 
     def _validate_value_type(
-        self, type_check: type, tag: str, value: Any, try_auto_type_fix: bool = False
+        self, type_check: type, tag: str, value: Any, try_auto_type_fix: bool = False, warn_user: bool = True
     ) -> tuple[str, bool, Any]:
         """Validate the type of the value for this tag.
 
@@ -146,14 +148,15 @@ class AbstractTag(ClassPrintFormatter, ABC):
         if not is_valid and try_auto_type_fix:
             try:
                 value = [self.read(tag, str(x)) for x in value] if self.can_repeat else self.read(tag, str(value))
-                tag, is_valid, value = self._validate_value_type(type_check, tag, value)
+                tag, is_valid, value = self._validate_value_type(type_check, tag, value, warn_user=warn_user)
             except (TypeError, ValueError):
-                warning = f"Could not fix the typing for tag '{tag}'"
+                warning = f"Could not fix the typing for tag '{tag}' expecting type {type_check}"
                 try:
-                    warning += f"{value}!"
+                    warning += f" of value {value} with type {type(value)}!"
                 except (ValueError, TypeError):
                     warning += "(unstringable value)!"
-                warnings.warn("warning", stacklevel=2)
+                if warn_user:
+                    warnings.warn(warning, stacklevel=2)
         return tag, is_valid, value
 
     def _validate_repeat(self, tag: str, value: Any) -> None:
@@ -292,7 +295,9 @@ class BoolTag(AbstractTag):
             "write": self._TF_write_options,
         }
 
-    def validate_value_type(self, tag: str, value: Any, try_auto_type_fix: bool = False) -> tuple[str, bool, Any]:
+    def validate_value_type(
+        self, tag: str, value: Any, try_auto_type_fix: bool = False, warn_user: bool = True
+    ) -> tuple[str, bool, Any]:
         """Validate the type of the value for this tag.
 
         Args:
@@ -304,7 +309,7 @@ class BoolTag(AbstractTag):
         Returns:
             tuple[str, bool, Any]: The tag, whether the value is of the correct type, and the possibly fixed value.
         """
-        return self._validate_value_type(bool, tag, value, try_auto_type_fix=try_auto_type_fix)
+        return self._validate_value_type(bool, tag, value, try_auto_type_fix=try_auto_type_fix, warn_user=warn_user)
 
     def _is_equal_to(self, val1: Any, obj2: AbstractTag, val2: Any) -> bool:
         """Check if the two values are equal.
@@ -382,7 +387,9 @@ class StrTag(AbstractTag):
 
     options: list | None = None
 
-    def validate_value_type(self, tag: str, value: Any, try_auto_type_fix: bool = False) -> tuple[str, bool, Any]:
+    def validate_value_type(
+        self, tag: str, value: Any, try_auto_type_fix: bool = False, warn_user: bool = True
+    ) -> tuple[str, bool, Any]:
         """Validate the type of the value for this tag.
 
         Args:
@@ -394,7 +401,7 @@ class StrTag(AbstractTag):
         Returns:
             tuple[str, bool, Any]: The tag, whether the value is of the correct type, and the possibly fixed value.
         """
-        return self._validate_value_type(str, tag, value, try_auto_type_fix=try_auto_type_fix)
+        return self._validate_value_type(str, tag, value, try_auto_type_fix=try_auto_type_fix, warn_user=warn_user)
 
     def _is_equal_to(self, val1: Any, obj2: AbstractTag, val2: Any) -> bool:
         """Check if the two values are equal.
@@ -529,7 +536,9 @@ class IntTag(AbstractNumericTag):
     Tag for integer values in JDFTx input files.
     """
 
-    def validate_value_type(self, tag: str, value: Any, try_auto_type_fix: bool = False) -> tuple[str, bool, Any]:
+    def validate_value_type(
+        self, tag: str, value: Any, try_auto_type_fix: bool = False, warn_user: bool = True
+    ) -> tuple[str, bool, Any]:
         """Validate the type of the value for this tag.
 
         Args:
@@ -541,7 +550,7 @@ class IntTag(AbstractNumericTag):
         Returns:
             tuple[str, bool, Any]: The tag, whether the value is of the correct type, and the possibly fixed value.
         """
-        return self._validate_value_type(int, tag, value, try_auto_type_fix=try_auto_type_fix)
+        return self._validate_value_type(int, tag, value, try_auto_type_fix=try_auto_type_fix, warn_user=warn_user)
 
     def read(self, tag: str, value: str) -> int:
         """Read the value string for this tag.
@@ -591,7 +600,9 @@ class FloatTag(AbstractNumericTag):
 
     prec: int | None = None
 
-    def validate_value_type(self, tag: str, value: Any, try_auto_type_fix: bool = False) -> tuple[str, bool, Any]:
+    def validate_value_type(
+        self, tag: str, value: Any, try_auto_type_fix: bool = False, warn_user: bool = True
+    ) -> tuple[str, bool, Any]:
         """Validate the type of the value for this tag.
 
         Args:
@@ -603,7 +614,7 @@ class FloatTag(AbstractNumericTag):
         Returns:
             tuple[str, bool, Any]: The tag, whether the value is of the correct type, and the possibly fixed value.
         """
-        return self._validate_value_type(float, tag, value, try_auto_type_fix=try_auto_type_fix)
+        return self._validate_value_type(float, tag, value, try_auto_type_fix=try_auto_type_fix, warn_user=warn_user)
 
     def read(self, tag: str, value: str) -> float:
         """Read the value string for this tag.
@@ -669,7 +680,9 @@ class InitMagMomTag(AbstractTag):
     #     being a StructureDeferredTag, because this tag needs to know the
     #     results of reading in the structure before being able to robustly
     #     parse the value of this tag
-    def validate_value_type(self, tag: str, value: Any, try_auto_type_fix: bool = False) -> tuple[str, bool, Any]:
+    def validate_value_type(
+        self, tag: str, value: Any, try_auto_type_fix: bool = False, warn_user: bool = True
+    ) -> tuple[str, bool, Any]:
         """Validate the type of the value for this tag.
 
         Args:
@@ -681,7 +694,7 @@ class InitMagMomTag(AbstractTag):
         Returns:
             tuple[str, bool, Any]: The tag, whether the value is of the correct type, and the possibly fixed value.
         """
-        return self._validate_value_type(str, tag, value, try_auto_type_fix=try_auto_type_fix)
+        return self._validate_value_type(str, tag, value, try_auto_type_fix=try_auto_type_fix, warn_user=warn_user)
 
     def read(self, tag: str, value: str) -> str:
         """Read the value string for this tag.
@@ -739,7 +752,7 @@ class TagContainer(AbstractTag):
     subtags: dict[str, AbstractTag] = field(default_factory=dict)
 
     def _validate_single_entry(
-        self, value: dict | list[dict], try_auto_type_fix: bool = False
+        self, value: dict | list[dict], try_auto_type_fix: bool = False, warn_user: bool = True
     ) -> tuple[list[str], list[bool], Any]:
         if not isinstance(value, dict):
             raise TypeError(f"The value '{value}' (of type {type(value)}) must be a dict for this TagContainer!")
@@ -749,7 +762,7 @@ class TagContainer(AbstractTag):
         for subtag, subtag_value in value.items():
             subtag_object = self.subtags[subtag]
             tag, check, subtag_value2 = subtag_object.validate_value_type(
-                subtag, subtag_value, try_auto_type_fix=try_auto_type_fix
+                subtag, subtag_value, try_auto_type_fix=try_auto_type_fix, warn_user=warn_user
             )
             if try_auto_type_fix:
                 updated_value[subtag] = subtag_value2
@@ -801,7 +814,9 @@ class TagContainer(AbstractTag):
                 warnings.warn(warnmsg, stacklevel=2)
         return is_valid_out, f"{tag}: {errors_out}"
 
-    def validate_value_type(self, tag: str, value: Any, try_auto_type_fix: bool = False) -> tuple[str, bool, Any]:
+    def validate_value_type(
+        self, tag: str, value: Any, try_auto_type_fix: bool = False, warn_user: bool = True
+    ) -> tuple[str, bool, Any]:
         """Validate the type of the value for this tag.
 
         Args:
@@ -816,7 +831,10 @@ class TagContainer(AbstractTag):
         value_dict = self.get_dict_representation(tag, value)
         if self.can_repeat:
             self._validate_repeat(tag, value_dict)
-            results = [self._validate_single_entry(x, try_auto_type_fix=try_auto_type_fix) for x in value_dict]
+            results = [
+                self._validate_single_entry(x, try_auto_type_fix=try_auto_type_fix, warn_user=warn_user)
+                for x in value_dict
+            ]
             tags_list_list: list[list[str]] = [result[0] for result in results]
             is_valids_list_list: list[list[bool]] = [result[1] for result in results]
             updated_value: Any = [result[2] for result in results]
@@ -1152,7 +1170,9 @@ class MultiformatTag(AbstractTag):
 
     format_options: list[AbstractTag] = field(default_factory=list)
 
-    def validate_value_type(self, tag: str, value: Any, try_auto_type_fix: bool = False) -> tuple[str, bool, Any]:
+    def validate_value_type(
+        self, tag: str, value: Any, try_auto_type_fix: bool = False, warn_user: bool = True
+    ) -> tuple[str, bool, Any]:
         """Validate the type of the value for this tag.
 
         Args:
@@ -1259,7 +1279,7 @@ class MultiformatTag(AbstractTag):
                 value = value_any
             try:
                 _, is_tag_valid, value = format_option.validate_value_type(
-                    tag, value, try_auto_type_fix=try_auto_type_fix
+                    tag, value, try_auto_type_fix=try_auto_type_fix, warn_user=False
                 )
                 if not is_tag_valid:
                     self.raise_invalid_format_option_error(tag, i)
@@ -1360,7 +1380,9 @@ class DumpTagContainer(TagContainer):
         self._check_unread_values(tag, value)
         return subdict
 
-    def validate_value_type(self, tag: str, value: Any, try_auto_type_fix: bool = False) -> tuple[str, bool, Any]:
+    def validate_value_type(
+        self, tag: str, value: Any, try_auto_type_fix: bool = False, warn_user: bool = True
+    ) -> tuple[str, bool, Any]:
         """Validate the type of the value for this tag.
 
         Args:
@@ -1376,7 +1398,9 @@ class DumpTagContainer(TagContainer):
         value_dict = value
         # value_dict = self.get_dict_representation(tag, value)
         self._validate_repeat(tag, value_dict)
-        results = [self._validate_single_entry(x, try_auto_type_fix=try_auto_type_fix) for x in value_dict]
+        results = [
+            self._validate_single_entry(x, try_auto_type_fix=try_auto_type_fix, warn_user=warn_user) for x in value_dict
+        ]
         tags_list_list: list[list[str]] = [result[0] for result in results]
         is_valids_list_list: list[list[bool]] = [result[1] for result in results]
         updated_value: Any = [result[2] for result in results]
