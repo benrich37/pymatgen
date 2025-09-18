@@ -150,9 +150,9 @@ class AbstractTag(ClassPrintFormatter, ABC):
                 value = [self.read(tag, str(x)) for x in value] if self.can_repeat else self.read(tag, str(value))
                 tag, is_valid, value = self._validate_value_type(type_check, tag, value, warn_user=warn_user)
             except (TypeError, ValueError):
-                warning = f"Could not fix the typing for tag '{tag}' expecting type {type_check}"
+                warning = f"Could not fix the typing for tag '{tag}' expecting type {type_check} of value "
                 try:
-                    warning += f" of value {value} with type {type(value)}!"
+                    warning += f"{value} with type {type(value)}!"
                 except (ValueError, TypeError):
                     warning += "(unstringable value)!"
                 if warn_user:

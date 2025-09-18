@@ -1099,10 +1099,11 @@ def _parse_posn_line(
     # Convert the movescale tag to a redundant selective_dynamics tag to match the expected shape
     # (int(bool(v)) used since technically something like "0.1" can be passed to JDFTx to indicate non-freezing)
     sd = [int(bool(posn_line.split()[offset + 5])) for _ in range(3)]
-    # Check for constraints (protected by try/except since its genuinely more likely that an accidental edit
-    # triggers this since this is a rarely used feature)
-    try:
-        if len(psplit) > offset + 6:
+    # Only trigger the try/except block if we have enough elements in the line
+    if len(psplit) > offset + 6:
+        # Check for constraints (protected by try/except since its genuinely more likely that an accidental edit
+        # triggers this since this is a rarely used feature)
+        try:
             constraint_type = psplit[offset + 6]
             if constraint_type in constraint_types:
                 # Check for multiple HyperPlane constraints
@@ -1118,8 +1119,8 @@ def _parse_posn_line(
             else:
                 # Ignore unrecognized constraint types
                 constraint_type = None
-    except (IndexError, ValueError, TypeError):
-        pass
+        except (IndexError, ValueError, TypeError):
+            pass
     return name, posn, sd, velocity, constraint_type, constraint_vector, group_names
 
 
