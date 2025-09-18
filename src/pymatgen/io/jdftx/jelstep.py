@@ -398,9 +398,10 @@ class JElSteps:
             etype (str): The type of energy component.
         """
         slices: list[JElStep] = []
-        converged = False
-        converged_reason = None
-        instance = cls(slices=slices, converged=converged, converged_reason=converged_reason)
+        # converged = False
+        # converged_reason = None
+        # instance = cls(slices=slices, converged=converged, converged_reason=converged_reason)
+        instance = cls(slices=slices, converged=False, converged_reason=None)
         instance.opt_type = opt_type
         instance.etype = etype
         return instance
