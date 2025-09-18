@@ -397,11 +397,7 @@ class JElSteps:
             opt_type (str): The type of electronic minimization step.
             etype (str): The type of energy component.
         """
-        # slices: list[JElStep] = []
-        instance = cls(slices=[], converged=False, converged_reason=None)
-        instance.opt_type = opt_type
-        instance.etype = etype
-        return instance
+        return cls(slices=[], converged=False, converged_reason=None, opt_type=opt_type, etype=etype)
 
     def __post_init__(self) -> None:
         """Post initialization method."""
