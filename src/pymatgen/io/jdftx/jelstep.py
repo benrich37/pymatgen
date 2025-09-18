@@ -370,7 +370,7 @@ class JElSteps:
                 try:
                     eslice = JElStep._from_lines_collect(_lines_collect, opt_type, etype)
                 except (ValueError, IndexError, TypeError, KeyError, AttributeError):
-                    pass  # Do not pass on assertion error - needed for Etot parsing in JOutStructure
+                    pass  # Do not pass on RunTime error - needed for Etot parsing in JOutStructure
                 if eslice is not None:
                     slices.append(eslice)
                     break

@@ -70,10 +70,16 @@ def test_JDFTXOutfile_fromfile(filename: Path, known: dict):
     ],
 )
 def test_JDFTXOutfile_skimming(filename: Path, known: dict, known_simple: dict):
+    # Parse multiple times to get average time
+    n_iters = 3
     # Time parsing the out file in regular mode
-    start1 = time()
-    jof_full = JDFTXOutfile.from_file(filename)
-    time_full = time() - start1
+    time_fulls: list[float] = []
+    for _ in range(n_iters):
+        start1 = time()
+        jof_full = JDFTXOutfile.from_file(filename)
+        time_full = time() - start1
+        time_fulls.append(time_full)
+    time_full = sum(time_fulls) / n_iters
     # Count how minimum fewer objects can be read at each depth level
     nless_outslices = len(jof_full.slices) - 1
     nless_last_geom = len(jof_full.slices[-1].jstrucs.slices) - 1
@@ -88,11 +94,16 @@ def test_JDFTXOutfile_skimming(filename: Path, known: dict, known_simple: dict):
         skim_levelss.extend(combinations(skim_level_options, r))
     levels_time_tested = 0
     time_save_logs = []
+
     for skim_levels in skim_levelss:
         # Time parsing the out file in skimmed mode
-        skim_start = time()
-        jof_skim = JDFTXOutfile.from_file(filename, skim_levels=skim_levels)
-        skim_time = time() - skim_start
+        skim_times = []
+        for _ in range(n_iters):
+            skim_start = time()
+            jof_skim = JDFTXOutfile.from_file(filename, skim_levels=skim_levels)
+            skim_time = time() - skim_start
+            skim_times.append(skim_time)
+        skim_time = sum(skim_times) / n_iters
         # Check that the skimmed version matches the full version where it should
         jdftxoutfile_matches_known(jof_skim, known)
         jdftxoutfile_matches_known_simple(jof_skim, known_simple)
