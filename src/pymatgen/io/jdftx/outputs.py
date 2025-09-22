@@ -746,6 +746,8 @@ class JDFTXOutfile:
                     - This will still result in the same number of `JOutStructure`'s created, but each
                         `JOutStructure` will have the same coordinates and lattice vectors as the
                         input structure.
+                - "forces": Skip parsing the lines for forces.
+                - "charges": Skip parsing the lines for Lowdin charges/magnetic moments.
 
 
         Returns:

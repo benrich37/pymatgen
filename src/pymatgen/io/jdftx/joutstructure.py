@@ -393,7 +393,9 @@ class JOutStructure(Structure):
             instance._parse_lattice_lines(line_collections["lattice"]["lines"])
             # Posns must be parsed before forces and lowdin analysis so that they can be stored in site_properties
             cur_species = instance._parse_posns_lines(line_collections["posns"]["lines"], cur_species)
+        if "forces" not in skip_props:
             instance._parse_forces_lines(line_collections["forces"]["lines"])
+        if "lowdin" not in skip_props:
             instance._parse_lowdin_lines(line_collections["lowdin"]["lines"], cur_species)
         # Can be parsed at any point
         instance._parse_strain_lines(line_collections["strain"]["lines"])
