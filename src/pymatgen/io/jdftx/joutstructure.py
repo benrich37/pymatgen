@@ -52,7 +52,6 @@ class JOutStructure(Structure):
         opt_type (str | None): The type of optimization step.
         etype (str | None): The type of energy from the electronic minimization data.
         eopt_type (str | None): The type of electronic minimization step.
-        emin_flag (str | None): The flag that indicates the start of a log message for a JDFTx optimization step.
         ecomponents (dict | None): The energy components of the system.
         elecmindata (JElSteps | None): The electronic minimization data.
         stress (np.ndarray | None): The stress tensor.
@@ -86,7 +85,6 @@ class JOutStructure(Structure):
     etype: str | None = None
     backup_etype: str = "Etot"
     eopt_type: str | None = None
-    emin_flag: str | None = None
     ecomponents: dict | None = None
     elecmindata: JElSteps | None = None
     stress: NDArray[np.float64] | None = None
@@ -331,7 +329,6 @@ class JOutStructure(Structure):
         text_slice: list[str],
         eopt_type: str | None = "ElecMinimize",
         opt_type: str | None = "IonicMinimize",
-        emin_flag: str = "---- Electronic minimization -------",
         init_structure: Structure | None = None,
         is_md: bool = False,
         expected_etype: str | None = None,
@@ -349,8 +346,6 @@ class JOutStructure(Structure):
             optimization step / SCF cycle.
             eopt_type (str): The type of electronic minimization step.
             opt_type (str): The type of optimization step.
-            emin_flag (str): The flag that indicates the start of a log message for a JDFTx
-            optimization step.
             init_structure (Structure | None): The initial structure of the system.
             is_md (bool): Whether the optimization step is a molecular dynamics step.
 
@@ -374,10 +369,10 @@ class JOutStructure(Structure):
             )
         instance.eopt_type = eopt_type
         instance.opt_type = opt_type
-        instance.emin_flag = emin_flag
         instance.is_md = is_md
         if expected_etype is not None:
             instance.etype = expected_etype
+        # Remove line types that are being skipped anyways to speed up `_gather_line_collections`
         if "struct" in skip_props:
             instance.line_types.remove("lattice")
             instance.line_types.remove("posns")
@@ -486,23 +481,6 @@ class JOutStructure(Structure):
                         sdict["lines"].append(line)
                         break
         return line_collections
-
-    def _is_emin_start_line(self, line_text: str) -> bool:
-        """Return True if emin start line.
-
-        Return True if the line_text is the start of a log message for a JDFTx
-        optimization step.
-
-        Args:
-            line_text (str): A line of text from a JDFTx out file.
-
-        Returns:
-            bool: True if the line_text is the start of a log message for a JDFTx
-            optimization step.
-        """
-        if self.emin_flag is None:
-            raise ValueError("emin_flag is not set")
-        return self.emin_flag in line_text
 
     def _is_opt_start_line(self, line_text: str) -> bool:
         """Return True if opt start line.
@@ -957,8 +935,6 @@ class JOutStructure(Structure):
             return line_type_map[line_type] in line_text
         if line_type == "opt":
             return self._is_opt_start_line(line_text)
-        if line_type == "emin":
-            return self._is_emin_start_line(line_text)
         raise ValueError(f"Unrecognized line type {line_type}")
 
     def _collect_generic_line(self, line_text: str, generic_lines: list[str]) -> tuple[list[str], bool, bool]:
@@ -1132,6 +1108,7 @@ line_type_map = {
     "kinetic_stress": "# Stress tensor including kinetic",
     "strain": "# Strain tensor in",
     "lattice": "# Lattice vectors:",
+    "emin": "---- Electronic minimization -------",
     # "emin": f"{'MD Step' if True else 'SCF Iter'}:",
     ####
     "charges": "oxidation-state",
