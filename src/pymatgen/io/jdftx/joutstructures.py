@@ -159,6 +159,7 @@ class JOutStructures:
         is_md: bool = False,
         expected_etype: str | None = None,
         skim_levels: list[str] | None = None,
+        skip_props: list[str] | None = None,
     ) -> JOutStructures:
         """
         Return JStructures object.
@@ -183,6 +184,7 @@ class JOutStructures:
             is_md=is_md,
             expected_etype=expected_etype,
             skim_levels=skim_levels,
+            skip_props=skip_props,
         )
         return cls(slices=slices)
 
@@ -404,6 +406,7 @@ def _get_joutstructure_list(
     skip_error_structures: bool = True,
     expected_etype: str | None = None,
     skim_levels: list[str] | None = None,
+    skip_props: list[str] | None = None,
 ) -> list[JOutStructure]:
     """Return list of JOutStructure objects.
 
@@ -432,7 +435,15 @@ def _get_joutstructure_list(
     if skim_levels is not None and "geom" in skim_levels:
         for bounds in out_bounds[::-1]:
             joutstructure = parse_joutstructure_bounds(
-                init_structure, out_slice, bounds, opt_type, is_md, expected_etype, skim_levels, raise_on_error=False
+                init_structure,
+                out_slice,
+                bounds,
+                opt_type,
+                is_md,
+                expected_etype,
+                skim_levels,
+                raise_on_error=False,
+                skip_props=skip_props,
             )
             if joutstructure is not None:
                 joutstructure_list.append(joutstructure)
@@ -452,6 +463,7 @@ def _get_joutstructure_list(
             expected_etype,
             skim_levels,
             raise_on_error=((i != len(out_bounds) - 1) and (not skip_error_structures)),
+            skip_props=skip_props,
         )
         if joutstructure is not None:
             joutstructure_list.append(joutstructure)
@@ -467,6 +479,7 @@ def parse_joutstructure_bounds(
     expected_etype: str | None,
     skim_levels: list[str] | None,
     raise_on_error: bool,
+    skip_props: list[str] | None = None,
 ) -> JOutStructure | None:
     joutstructure = None
     try:
@@ -477,6 +490,7 @@ def parse_joutstructure_bounds(
             is_md=is_md,
             expected_etype=expected_etype,
             skim_levels=skim_levels,
+            skip_props=skip_props,
         )
     except (ValueError, IndexError, TypeError, KeyError, AttributeError):
         if raise_on_error:

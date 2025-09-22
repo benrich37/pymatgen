@@ -721,6 +721,7 @@ class JDFTXOutfile:
         is_bgw: bool = False,
         none_slice_on_error: bool | None = None,
         skim_levels: list[str] | None = None,
+        skip_props: list[str] | None = None,
     ) -> JDFTXOutfile:
         """
         Create a JDFTXOutfile object from a JDFTx out file.
@@ -739,6 +740,13 @@ class JDFTXOutfile:
                 - "outfile": Skim to most recent JDFTx call
                 - "geom": Skim to most recent geometric optimization step
                 - "elec": Skim to most recent electronic optimization step
+            skip_props (list[str] | None): A list of properties to skip when parsing each slice. This can be useful for
+                speeding up the parsing process when certain properties are not needed. Options are:
+                - "struct": Skip parsing the lines for coordinates/lattice vectors.
+                    - This will still result in the same number of `JOutStructure`'s created, but each
+                        `JOutStructure` will have the same coordinates and lattice vectors as the
+                        input structure.
+
 
         Returns:
             JDFTXOutfile: The JDFTXOutfile object.
@@ -755,7 +763,7 @@ class JDFTXOutfile:
             oslice = None
             for text in texts[::-1]:
                 oslice = JDFTXOutfileSlice._from_out_slice(
-                    text, is_bgw=is_bgw, none_on_error=True, skim_levels=skim_levels
+                    text, is_bgw=is_bgw, none_on_error=True, skim_levels=skim_levels, skip_props=skip_props
                 )
                 if oslice is not None:
                     slices.append(oslice)
@@ -769,7 +777,7 @@ class JDFTXOutfile:
             none_slice_bools = [none_slice_on_error for i in range(len(texts))]
         slices = [
             JDFTXOutfileSlice._from_out_slice(
-                text, is_bgw=is_bgw, none_on_error=none_slice_bools[i], skim_levels=skim_levels
+                text, is_bgw=is_bgw, none_on_error=none_slice_bools[i], skim_levels=skim_levels, skip_props=skip_props
             )
             for i, text in enumerate(texts)
         ]
