@@ -378,6 +378,13 @@ class JOutStructure(Structure):
         instance.is_md = is_md
         if expected_etype is not None:
             instance.etype = expected_etype
+        if "struct" in skip_props:
+            instance.line_types.remove("lattice")
+            instance.line_types.remove("posns")
+        if "forces" in skip_props:
+            instance.line_types.remove("forces")
+        if "lowdin" in skip_props:
+            instance.line_types.remove("lowdin")
         line_collections = instance._init_line_collections()
         line_collections = instance._gather_line_collections(line_collections, text_slice)
 
@@ -813,9 +820,9 @@ class JOutStructure(Structure):
         charges_dict: dict[str, list[float]] = {}
         moments_dict: dict[str, list[float]] = {}
         for line in lowdin_lines:
-            if _is_charges_line(line):
+            if line_type_map["charges"] in line:
                 charges_dict = self._parse_lowdin_line(line, charges_dict)
-            elif _is_magnetic_moments_line(line):
+            elif line_type_map["magnetic_moments"] in line:
                 moments_dict = self._parse_lowdin_line(line, moments_dict)
         names = [s.name for s in cur_species]
         charges = None
@@ -953,27 +960,6 @@ class JOutStructure(Structure):
         if line_type == "emin":
             return self._is_emin_start_line(line_text)
         raise ValueError(f"Unrecognized line type {line_type}")
-        # if line_type == "lowdin":
-        #     return is_lowdin_start_line(line_text)
-        # if line_type == "opt":
-        #     return self._is_opt_start_line(line_text)
-        # if line_type == "ecomp":
-        #     return _is_ecomp_start_line(line_text)
-        # if line_type == "forces":
-        #     return _is_forces_start_line(line_text)
-        # if line_type == "posns":
-        #     return _is_posns_start_line(line_text)
-        # if line_type == "stress":
-        #     return _is_stress_start_line(line_text)
-        # if line_type == "kinetic_stress":
-        #     return _is_kinetic_stress_start_line(line_text)
-        # if line_type == "strain":
-        #     return _is_strain_start_line(line_text)
-        # if line_type == "lattice":
-        #     return _is_lattice_start_line(line_text)
-        # if line_type == "emin":
-        #     return self._is_emin_start_line(line_text)
-        # raise ValueError(f"Unrecognized line type {line_type}")
 
     def _collect_generic_line(self, line_text: str, generic_lines: list[str]) -> tuple[list[str], bool, bool]:
         """Collect generic log line.
@@ -1064,7 +1050,6 @@ constraint_types = ["HyperPlane", "Linear", "Planar"]
 
 def _parse_posn_line(
     posn_line: str,
-    is_md: bool = False,
 ) -> tuple[
     str,
     NDArray[np.float64],
@@ -1136,6 +1121,7 @@ def _parse_posn_line(
     return name, posn, sd, velocity, constraint_type, constraint_vector, group_names
 
 
+# Map of line types to their identifying start strings in a JDFTx out file
 line_type_map = {
     "lowdin": "#--- Lowdin population analysis ---",
     # "opt": f"{self.opt_type}:",
@@ -1146,142 +1132,8 @@ line_type_map = {
     "kinetic_stress": "# Stress tensor including kinetic",
     "strain": "# Strain tensor in",
     "lattice": "# Lattice vectors:",
-    # "emin": f"{'MD Step' if True else 'SCF Iter'}:"
+    # "emin": f"{'MD Step' if True else 'SCF Iter'}:",
+    ####
+    "charges": "oxidation-state",
+    "magnetic_moments": "magnetic-moments",
 }
-
-
-# def _is_stress_start_line(line_text: str) -> bool:
-#     """Return True if the line_text is the start of stress log message.
-
-#     Return True if the line_text is the start of stress log message.
-
-#     Args:
-#         line_text (str): A line of text from a JDFTx out file.
-
-#     Returns:
-#         bool: True if the line_text is the start of stress log message.
-#     """
-#     return "# Stress tensor in" in line_text
-
-
-# def _is_kinetic_stress_start_line(line_text: str) -> bool:
-#     """Return True if the line_text is the start of kinetic stress log message.
-
-#     Return True if the line_text is the start of kinetic stress log message.
-
-#     Args:
-#         line_text (str): A line of text from a JDFTx out file.
-
-#     Returns:
-#         bool: True if the line_text is the start of kinetic stress log message.
-#     """
-#     return "# Stress tensor including kinetic" in line_text
-
-
-# def _is_strain_start_line(line_text: str) -> bool:
-#     """Return True if the line_text is the start of strain log message.
-
-#     Return True if the line_text is the start of strain log message.
-
-#     Args:
-#         line_text (str): A line of text from a JDFTx out file.
-
-#     Returns:
-#         bool: True if the line_text is the start of strain log message.
-#     """
-#     return "# Strain tensor in" in line_text
-
-
-# def _is_posns_start_line(line_text: str) -> bool:
-#     """Return True if the line_text is the start of posns log message.
-
-#     Return True if the line_text is the start of a log message for a JDFTx
-#     optimization step.
-
-#     Args:
-#         line_text (str): A line of text from a JDFTx out file containing the positions of atoms.
-
-#     Returns:
-#         bool: True if the line_text is the start of a log message for a JDFTx optimization step.
-#     """
-#     return "# Ionic positions" in line_text
-
-
-# def _is_ecomp_start_line(line_text: str) -> bool:
-#     """Return True if the line_text is the start of ecomp log message.
-
-#     Return True if the line_text is the start of a log message for a JDFTx
-#     optimization step.
-
-#     Args:
-#         line_text (str): A line of text from a JDFTx out file.
-
-#     Returns:
-#         bool: True if the line_text is the start of a log message for a JDFTx
-#         optimization step.
-#     """
-#     return "# Energy components" in line_text
-
-
-def _is_charges_line(line_text: str) -> bool:
-    """Return True if the line_text is start of charges log message.
-
-    Return True if the line_text is a line of text from a JDFTx out file
-    corresponding to a Lowdin population analysis.
-
-    Args:
-        line_text (str): A line of text from a JDFTx out file.
-
-    Returns:
-        bool: True if the line_text is a line of text from a JDFTx out file
-        corresponding to a Lowdin population.
-    """
-    return "oxidation-state" in line_text
-
-
-def _is_magnetic_moments_line(line_text: str) -> bool:
-    """Return True if the line_text is start of moments log message.
-
-    Return True if the line_text is a line of text from a JDFTx out file
-    corresponding to a Lowdin population analysis.
-
-    Args:
-        line_text (str): A line of text from a JDFTx out file.
-
-    Returns:
-        bool: True if the line_text is a line of text from a JDFTx out file
-        corresponding to a Lowdin population.
-    """
-    return "magnetic-moments" in line_text
-
-
-# def _is_forces_start_line(line_text: str) -> bool:
-#     """Return True if the line_text is the start of forces log message.
-
-#     Return True if the line_text is the start of a log message for a JDFTx
-#     optimization step.
-
-#     Args:
-#         line_text (str): A line of text from a JDFTx out file.
-
-#     Returns:
-#         bool: True if the line_text is the start of a log message for a JDFTx
-#         optimization step.
-#     """
-#     return "# Forces in" in line_text
-
-
-# def _is_lattice_start_line(line_text: str) -> bool:
-#     """Return True if the line_text is the start of lattice log message.
-
-#     Return True if the line_text is the start of a log message for a JDFTx
-#     optimization step.
-
-#     Args:
-#         line_text (str): A line of text from a JDFTx out file.
-
-#     Returns:
-#         bool: True if the line_text is the start of a log message for a JDFTx
-#         optimization step.
-#     """
-#     return "# Lattice vectors:" in line_text
