@@ -132,21 +132,21 @@ def test_JDFTXOutfile_skimming(filename: Path, known: dict, known_simple: dict):
                 less_geom_slices_read,
                 less_elec_slices_read,
             ]
-            assert skim_time < time_full, time_save_info
-            levels_time_tested += 1
-            time_save_logs.append(time_save_info)
-            time_save_info = [
-                filename.name,
-                skim_levels,
-                time_full,
-                skim_time,
-                less_outfile_slices_read,
-                less_geom_slices_read,
-                less_elec_slices_read,
-            ]
-            assert skim_time < time_full
-            levels_time_tested += 1
-            time_save_logs.append(time_save_info)
+            if not ((len(skim_levels) == 1) and (skim_levels[0] == "elec")):
+                # elec only skimming does not save enough time to be consistently fast enough
+                # to be detectable over noise in timing.
+                assert skim_time < time_full, time_save_info
+                levels_time_tested += 1
+                time_save_logs.append(time_save_info)
+                time_save_info = [
+                    filename.name,
+                    skim_levels,
+                    time_full,
+                    skim_time,
+                    less_outfile_slices_read,
+                    less_geom_slices_read,
+                    less_elec_slices_read,
+                ]
     assert levels_time_tested > 0, "No skim levels tested - likely an error in test code."
     print(time_save_logs)
 

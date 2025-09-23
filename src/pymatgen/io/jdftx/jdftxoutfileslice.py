@@ -894,7 +894,7 @@ class JDFTXOutfileSlice:
         Args:
             text (list[str]): Output of read_file for out file.
         """
-        self.initial_structure = self._get_initial_structure(text)
+        self.initial_structure = self.infile.to_pmg_structure(self.infile)
         # In the case where no ion optimization updates are printed, JOutStructures
         if self.geom_opt_type is None:
             raise ValueError("geom_opt_type not set yet.")

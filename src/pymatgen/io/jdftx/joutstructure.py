@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pprint
 import warnings
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING
 
 import numpy as np
 from monty.dev import deprecated
@@ -99,18 +99,6 @@ class JOutStructure(Structure):
     t_s: float | np.float64 | None = None
     geom_converged: bool = False
     geom_converged_reason: str | None = None
-    line_types: ClassVar[list[str]] = [
-        "emin",
-        "lattice",
-        "strain",
-        "kinetic_stress",
-        "stress",
-        "posns",
-        "forces",
-        "ecomp",
-        "lowdin",
-        "opt",
-    ]
     mu: float | np.float64 | None = None
     nelectrons: float | np.float64 | None = None
     abs_magneticmoment: float | np.float64 | None = None
@@ -369,18 +357,21 @@ class JOutStructure(Structure):
             )
         instance.eopt_type = eopt_type
         instance.opt_type = opt_type
-        instance.is_md = is_md
+        _line_types = list(line_types)
+        if is_md:
+            instance.is_md = True
+            _line_types.append("thermostat-velocity")
         if expected_etype is not None:
             instance.etype = expected_etype
         # Remove line types that are being skipped anyways to speed up `_gather_line_collections`
         if "struct" in skip_props:
-            instance.line_types.remove("lattice")
-            instance.line_types.remove("posns")
+            _line_types.remove("lattice")
+            _line_types.remove("posns")
         if "forces" in skip_props:
-            instance.line_types.remove("forces")
+            _line_types.remove("forces")
         if "lowdin" in skip_props:
-            instance.line_types.remove("lowdin")
-        line_collections = instance._init_line_collections()
+            _line_types.remove("lowdin")
+        line_collections = instance._init_line_collections(_line_types)
         line_collections = instance._gather_line_collections(line_collections, text_slice)
 
         # ecomponents needs to be parsed before emin and opt to set etype
@@ -395,6 +386,7 @@ class JOutStructure(Structure):
             instance._parse_lattice_lines(line_collections["lattice"]["lines"])
             # Posns must be parsed before forces and lowdin analysis so that they can be stored in site_properties
             cur_species = instance._parse_posns_lines(line_collections["posns"]["lines"], cur_species)
+
         if "forces" not in skip_props:
             instance._parse_forces_lines(line_collections["forces"]["lines"])
         if "lowdin" not in skip_props:
@@ -403,7 +395,10 @@ class JOutStructure(Structure):
         instance._parse_strain_lines(line_collections["strain"]["lines"])
         instance._parse_stress_lines(line_collections["stress"]["lines"])
         instance._parse_kinetic_stress_lines(line_collections["kinetic_stress"]["lines"])
-        instance._parse_thermostat_line(line_collections["posns"]["lines"])  # Thermostat-velocity dumped with positions
+        if instance.is_md:
+            if "struct" not in skip_props:
+                line_collections["thermostat-velocity"] = {"lines": line_collections["posns"]["lines"][-1:]}
+            instance._parse_thermostat_line(line_collections["thermostat-velocity"]["lines"])
         # In case of single-point calculation
         instance._init_e_sp_backup()
         # Setting attributes from elecmindata (set during _parse_emin_lines)
@@ -433,7 +428,7 @@ class JOutStructure(Structure):
         if err_str is not None:
             warnings.warn(err_str, stacklevel=2)
 
-    def _init_line_collections(self) -> dict:
+    def _init_line_collections(self, line_types: list[str]) -> dict:
         """Initialize line collection dict.
 
         Initialize a dictionary of line collections for each type of line in a
@@ -444,7 +439,7 @@ class JOutStructure(Structure):
             out file.
         """
         line_collections = {}
-        for line_type in self.line_types:
+        for line_type in line_types:
             line_collections[line_type] = {
                 "lines": [],
                 "collecting": False,
@@ -1097,6 +1092,20 @@ def _parse_posn_line(
     return name, posn, sd, velocity, constraint_type, constraint_vector, group_names
 
 
+line_types = [
+    "emin",
+    "lattice",
+    "strain",
+    "kinetic_stress",
+    "stress",
+    "posns",
+    "forces",
+    "ecomp",
+    "lowdin",
+    "opt",
+]
+
+
 # Map of line types to their identifying start strings in a JDFTx out file
 line_type_map = {
     "lowdin": "#--- Lowdin population analysis ---",
@@ -1113,4 +1122,5 @@ line_type_map = {
     ####
     "charges": "oxidation-state",
     "magnetic_moments": "magnetic-moments",
+    "thermostat-velocity": "thermostat-velocity",
 }

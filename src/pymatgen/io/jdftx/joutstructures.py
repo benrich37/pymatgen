@@ -450,7 +450,7 @@ def _get_joutstructure_list(
                 break
         return joutstructure_list
     for i, bounds in enumerate(out_bounds):
-        if i > 0:
+        if i > 0 and joutstructure_list:
             init_structure = joutstructure_list[-1]
         # The final out_slice slice is protected by the try/except block, as this slice has a high
         # chance of being empty or malformed.

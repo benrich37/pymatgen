@@ -473,7 +473,6 @@ class JDFTXInfile(dict, MSONable):
         """
         # use dict representation so it's easy to get the right column for
         # moveScale, rather than checking for velocities
-        print(jdftxinfile.get_dict_representation(jdftxinfile), "INPUT DICT REP")
         jdftxstructure = JDFTXStructure.from_jdftxinfile(
             jdftxinfile.get_dict_representation(jdftxinfile),
             sort_structure=sort_structure,
