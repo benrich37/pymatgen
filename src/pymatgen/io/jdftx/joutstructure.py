@@ -864,20 +864,15 @@ class JOutStructure(Structure):
                         raise ValueError("Could not find Iter in line")
                     if np.isnan(_nstep):
                         raise ValueError("Could not convert Iter to int")
-                    nstep = int(_nstep)
-                    self.nstep = nstep
+                    self.nstep = int(_nstep)
                     en = get_colon_val(line, f"{self.etype}:")
                     if en is None:
                         en = get_colon_val(line, f"{self.backup_etype}:")
                     self.e = en * Ha_to_eV
-                    grad_k = get_colon_val(line, "|grad|_K: ")
-                    self.grad_k = grad_k
-                    alpha = get_colon_val(line, "alpha: ")
-                    self.alpha = alpha
-                    linmin = get_colon_val(line, "linmin: ")
-                    self.linmin = linmin
-                    t_s = get_colon_val(line, "t[s]: ")
-                    self.t_s = t_s
+                    self.grad_k = get_colon_val(line, "|grad|_K: ")
+                    self.alpha = get_colon_val(line, "alpha: ")
+                    self.linmin = get_colon_val(line, "linmin: ")
+                    self.t_s = get_colon_val(line, "t[s]: ")
                 elif self._is_opt_conv_line(line):
                     self.geom_converged = True
                     self.geom_converged_reason = line.split("(")[1].split(")")[0].strip()
