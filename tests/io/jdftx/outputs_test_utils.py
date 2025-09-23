@@ -114,7 +114,10 @@ def jdftxoutfile_matches_known(joutfile: JDFTXOutfile, known: dict):
         joutfile.atom_elements_int,
     ):
         assert len(listlike) == known["nat"]
-    assert len(joutfile.slices) == known["nSlices"]
+    if joutfile.skim_levels is not None and "outfile" in joutfile.skim_levels:
+        assert len(joutfile.slices) == 1
+    else:
+        assert len(joutfile.slices) == known["nSlices"]
     # Not testing values yet, just testing they dont raise errors
     assert joutfile.trajectory is not None
     assert joutfile.electronic_output is not None
@@ -393,7 +396,7 @@ with open(ex_jstruc_slice_fname1, encoding="utf-8") as f:
     ex_jstruc_slice1 = list.copy(list(f))
 
 ex_jstruc_slice1_known = {
-    "opt_type": "lattice",
+    "opt_type": "LatticeMinimize",
     "nstep": 0,
     "etype": "F",
     "E": -246.5310079002406667 * Ha_to_eV,
@@ -437,7 +440,7 @@ with open(ex_jstruc_slice_fname2, encoding="utf-8") as f:
 
 
 ex_jstruc_slice2_known = {
-    "opt_type": "lattice",
+    "opt_type": "LatticeMinimize",
     "nstep": 9,
     "etype": "F",
     "E": -246.5310079002406667 * Ha_to_eV,
