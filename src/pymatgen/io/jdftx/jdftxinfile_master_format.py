@@ -1158,8 +1158,8 @@ MASTER_TAG_LIST: dict[str, dict[str, Any]] = {
             multiline_tag=False,
             subtags={
                 "B0": FloatTag(),
-                "chainLengthP": FloatTag(),
-                "chainLengthT": FloatTag(),
+                "chainLengthP": IntTag(),
+                "chainLengthT": IntTag(),
                 "dt": FloatTag(),
                 "nSteps": IntTag(),
                 "P0": FloatTag(),  # can accept numpy.nan
