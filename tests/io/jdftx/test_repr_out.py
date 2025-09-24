@@ -31,8 +31,13 @@ if TYPE_CHECKING:
     ("init_meth", "init_var", "add_checks"),
     [
         (lambda x: JDFTXOutfile.from_file(x), example_sp_outfile_path, lambda dir_repr: None),
-        (JDFTXOutfileSlice._from_out_slice, ex_outfileslice1, lambda dir_repr: None),
-        (lambda x: JOutStructures._from_out_slice(x, opt_type="lattice"), ex_outfileslice1, lambda dir_repr: None),
+        (lambda x: JDFTXOutfileSlice._from_out_slice(x, [], []), ex_outfileslice1, lambda dir_repr: None),
+        # (JDFTXOutfileSlice._from_out_slice, ex_outfileslice1, lambda dir_repr: None),
+        (
+            lambda x: JOutStructures._from_out_slice(x, opt_type="lattice"),
+            ex_outfileslice1,
+            lambda dir_repr: None,
+        ),
         (lambda x: JOutStructure._from_text_slice(x, opt_type="lattice"), ex_jstruc_slice1, lambda dir_repr: None),
         (lambda x: JElStep._from_lines_collect(x, "ElecMinimize", "F"), ex_jstep_lines1, lambda dir_repr: None),
         (
@@ -59,8 +64,13 @@ def test_dir_repr(init_meth: Callable, init_var: Any, add_checks: Callable) -> N
     ("init_meth", "init_var", "add_checks"),
     [
         (lambda x: JDFTXOutfile.from_file(x), example_sp_outfile_path, lambda dir_repr: None),
-        (JDFTXOutfileSlice._from_out_slice, ex_outfileslice1, lambda dir_repr: None),
-        (lambda x: JOutStructures._from_out_slice(x, opt_type="lattice"), ex_outfileslice1, lambda dir_repr: None),
+        (lambda x: JDFTXOutfileSlice._from_out_slice(x, [], []), ex_outfileslice1, lambda dir_repr: None),
+        # (JDFTXOutfileSlice._from_out_slice, ex_outfileslice1, lambda dir_repr: None),
+        (
+            lambda x: JOutStructures._from_out_slice(x, opt_type="lattice"),
+            ex_outfileslice1,
+            lambda dir_repr: None,
+        ),
         (lambda x: JOutStructure._from_text_slice(x, opt_type="lattice"), ex_jstruc_slice1, lambda dir_repr: None),
         (lambda x: JElStep._from_lines_collect(x, "ElecMinimize", "F"), ex_jstep_lines1, lambda dir_repr: None),
         (
@@ -87,8 +97,13 @@ def test_repr_repr(init_meth: Callable, init_var: Any, add_checks: Callable) -> 
     ("init_meth", "init_var", "add_checks"),
     [
         (lambda x: JDFTXOutfile.from_file(x), example_sp_outfile_path, lambda dir_repr: None),
-        (JDFTXOutfileSlice._from_out_slice, ex_outfileslice1, lambda dir_repr: None),
-        (lambda x: JOutStructures._from_out_slice(x, opt_type="lattice"), ex_outfileslice1, lambda dir_repr: None),
+        (lambda x: JDFTXOutfileSlice._from_out_slice(x, [], []), ex_outfileslice1, lambda dir_repr: None),
+        # (JDFTXOutfileSlice._from_out_slice, ex_outfileslice1, lambda dir_repr: None),
+        (
+            lambda x: JOutStructures._from_out_slice(x, opt_type="lattice"),
+            ex_outfileslice1,
+            lambda dir_repr: None,
+        ),
         (lambda x: JOutStructure._from_text_slice(x, opt_type="lattice"), ex_jstruc_slice1, lambda dir_repr: None),
         (lambda x: JElStep._from_lines_collect(x, "ElecMinimize", "F"), ex_jstep_lines1, lambda dir_repr: None),
         (
@@ -108,8 +123,16 @@ def test_str_repr(init_meth: Callable, init_var: Any, add_checks: Callable) -> N
     ("init_meth", "init_var", "add_checks"),
     [
         (lambda x: JDFTXOutfile.from_file(x), example_sp_outfile_path, lambda dir_repr: None),
-        (lambda x: JDFTXOutfileSlice._from_out_slice(x, none_on_error=False), ex_outfileslice1, lambda dir_repr: None),
-        (lambda x: JOutStructures._from_out_slice(x, opt_type="lattice"), ex_outfileslice1, lambda dir_repr: None),
+        (
+            lambda x: JDFTXOutfileSlice._from_out_slice(x, [], [], none_on_error=False),
+            ex_outfileslice1,
+            lambda dir_repr: None,
+        ),
+        (
+            lambda x: JOutStructures._from_out_slice(x, opt_type="lattice"),
+            ex_outfileslice1,
+            lambda dir_repr: None,
+        ),
         (lambda x: JOutStructure._from_text_slice(x, opt_type="lattice"), ex_jstruc_slice1, lambda dir_repr: None),
         (lambda x: JElStep._from_lines_collect(x, "ElecMinimize", "F"), ex_jstep_lines1, lambda dir_repr: None),
         (

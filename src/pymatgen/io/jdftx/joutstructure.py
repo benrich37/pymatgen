@@ -108,7 +108,7 @@ class JOutStructure(Structure):
     elec_grad_k: float | np.float64 | None = None
     elec_alpha: float | np.float64 | None = None
     elec_linmin: float | np.float64 | None = None
-    structure: Structure | None = None
+    _structure: Structure | None = None
     is_md: bool = False
     # thermostat_velocity: np.ndarray | None = None
     _velocities: list[NDArray[np.float64] | None] | None = None
@@ -386,7 +386,6 @@ class JOutStructure(Structure):
             instance._parse_lattice_lines(line_collections["lattice"]["lines"])
             # Posns must be parsed before forces and lowdin analysis so that they can be stored in site_properties
             cur_species = instance._parse_posns_lines(line_collections["posns"]["lines"], cur_species)
-
         if "forces" not in skip_props:
             instance._parse_forces_lines(line_collections["forces"]["lines"])
         if "lowdin" not in skip_props:
@@ -406,8 +405,15 @@ class JOutStructure(Structure):
         # Set relevant properties in self.properties
         instance._fill_properties()
         # Done last in case of any changes to site-properties
-        instance._init_structure(cur_species)
+        # instance._init_structure(cur_species)
         return instance
+
+    @property
+    def structure(self) -> Structure:
+        """Return structure attribute."""
+        if self._structure is None:
+            self._init_structure()
+        return self._structure
 
     def _init_e_sp_backup(self) -> None:
         """Initialize self.e with coverage for single-point calculations."""
@@ -967,11 +973,11 @@ class JOutStructure(Structure):
             "strain": self.strain,
         }
 
-    def _init_structure(self, cur_species: Sequence[Element | Species]) -> None:
+    def _init_structure(self) -> None:
         """Initialize structure attribute."""
-        self.structure = Structure(
+        self._structure = Structure(
             lattice=self.lattice,
-            species=cur_species,
+            species=self.species,
             coords=self.cart_coords,
             site_properties=self.site_properties,
             coords_are_cartesian=True,

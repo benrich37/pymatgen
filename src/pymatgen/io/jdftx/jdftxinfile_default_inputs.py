@@ -7,6 +7,7 @@ import numpy as np
 # One example is fluid-minimize, which has different convergence thresholds and max iterations depending
 # on the algorithm specified. For these tags, a second set of default values which can map partially
 # filled tagcontainers to the set as filled by JDFTx is needed.
+# TODO: Make sure ion-width, which changes based on 'fluid' tag, is handled correctly.
 default_inputs = {
     "basis": "kpoint-dependent",
     "coords-type": "Lattice",

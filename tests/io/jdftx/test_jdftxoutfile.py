@@ -187,7 +187,8 @@ def test_none_on_partial(ex_outfile_path: Path):
     texts0 = texts[:-1]
 
     slices = [
-        JDFTXOutfileSlice._from_out_slice(text, is_bgw=False, none_on_error=False) for i, text in enumerate(texts0)
+        JDFTXOutfileSlice._from_out_slice(text, [], [], is_bgw=False, none_on_error=False)
+        for i, text in enumerate(texts0)
     ]
     outfile1 = JDFTXOutfile(slices=slices)
     slices.append(None)
