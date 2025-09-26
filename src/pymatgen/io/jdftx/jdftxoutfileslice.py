@@ -291,7 +291,7 @@ class JDFTXOutfileSlice:
     converged: bool | None = None
     structure: Structure | None = None
     initial_structure: Structure | None = None
-    trajectory: Trajectory | None = None
+    _trajectory: Trajectory | None = None
     electronic_output: dict | None = None
     eopt_type: str | None = None
     elecmindata: JElSteps | None = None
@@ -336,10 +336,10 @@ class JDFTXOutfileSlice:
     def _from_out_slice(
         cls,
         text: list[str],
+        skim_levels: list[str],
+        skip_props: list[str],
         is_bgw: bool = False,
         none_on_error: bool = True,
-        skim_levels: list[str] | None = None,
-        skip_props: list[str] | None = None,
     ) -> JDFTXOutfileSlice | None:
         """
         Read slice of out file into a JDFTXOutfileSlice instance.
@@ -356,16 +356,14 @@ class JDFTXOutfileSlice:
         instance = cls()
         instance.is_bgw = is_bgw
         try:
-            instance._from_out_slice_init_all(text, skim_levels=skim_levels, skip_props=skip_props)
+            instance._from_out_slice_init_all(text, skim_levels, skip_props)
         except (ValueError, IndexError, TypeError, KeyError, AttributeError):
             if none_on_error:
                 return None
             raise
         return instance
 
-    def _from_out_slice_init_all(
-        self, text: list[str], skim_levels: list[str] | None = None, skip_props: list[str] | None = None
-    ) -> None:
+    def _from_out_slice_init_all(self, text: list[str], skim_levels: list[str], skip_props: list[str]) -> None:
         self._set_internal_infile(text)
         # self._set_min_settings(text)
         self._set_geomopt_vars(text)
@@ -470,11 +468,22 @@ class JDFTXOutfileSlice:
             structures = [slc.structure for slc in self.jstrucs]
             constant_lattice = self.constant_lattice if self.constant_lattice is not None else False
             frame_properties = [slc.properties for slc in self.jstrucs]
-            self.trajectory = Trajectory.from_structures(
+            self._trajectory = Trajectory.from_structures(
                 structures=structures,
                 constant_lattice=constant_lattice,
                 frame_properties=frame_properties,
             )
+
+    @property
+    def trajectory(self) -> Trajectory | None:
+        """Return pymatgen trajectory object.
+
+        Returns:
+            Trajectory: pymatgen Trajectory object containing intermediate Structure's of outfile slice calculation.
+        """
+        if self._trajectory is None:
+            self._set_trajectory()
+        return self._trajectory
 
     def _set_electronic_output(self) -> None:
         """Return a dictionary with all relevant electronic information.
@@ -884,9 +893,7 @@ class JDFTXOutfileSlice:
             raise ValueError("Provided out file slice's inputs preamble does not contain input structure data.")
         return init_struc
 
-    def _set_jstrucs(
-        self, text: list[str], skim_levels: list[str] | None = None, skip_props: list[str] | None = None
-    ) -> None:
+    def _set_jstrucs(self, text: list[str], skim_levels: list[str], skip_props: list[str]) -> None:
         """Set the jstrucs class variable.
 
         Set the JStructures object to jstrucs from the out file text and all class attributes initialized from jstrucs.
@@ -903,6 +910,8 @@ class JDFTXOutfileSlice:
             expected_etype = "G"
         self.jstrucs = JOutStructures._from_out_slice(
             text,
+            # skim_levels,
+            # skip_props,
             opt_type=self.geom_opt_label,
             init_struc=self.initial_structure,
             is_md=self.is_md,
@@ -910,10 +919,10 @@ class JDFTXOutfileSlice:
             skim_levels=skim_levels,
             skip_props=skip_props,
         )
-        if self.etype is None:
-            self.etype = self.jstrucs[-1].etype
         if self.jstrucs is not None:
-            self._set_trajectory()
+            if self.etype is None:
+                self.etype = self.jstrucs[-1].etype
+            # self._set_trajectory()
             self.mu = self._get_mu()
             for var in _jofs_atr_from_jstrucs:
                 setattr(self, var, getattr(self.jstrucs, var))

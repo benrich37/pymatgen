@@ -574,7 +574,7 @@ MASTER_TAG_LIST: dict[str, dict[str, Any]] = {
                     write_tagname=False,
                     optional=False,
                 ),
-                "origin": TagContainer(
+                "center": TagContainer(
                     allow_list_representation=True,
                     optional=True,
                     subtags={

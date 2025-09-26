@@ -649,7 +649,8 @@ class JDFTXOutfile:
     atom_coords_final: list[list[float]] = field(init=False)
     atom_coords: list[list[float]] = field(init=False)
     structure: Structure = field(init=False)
-    trajectory: Trajectory = field(init=False)
+    # _trajectory: Trajectory = field(init=False)
+    _trajectory: Trajectory | None = None
     has_solvation: bool = field(init=False)
     fluid: str = field(init=False)
     is_gc: bool = field(init=False)
@@ -681,7 +682,7 @@ class JDFTXOutfile:
         cls,
         calc_dir: str | Path,
         is_bgw: bool = False,
-        none_slice_on_error: bool | None = None,
+        none_slice_on_error: bool = True,
         skim_levels: list[str] | None = None,
     ) -> JDFTXOutfile:
         """
@@ -719,7 +720,9 @@ class JDFTXOutfile:
         cls,
         file_path: str | Path,
         is_bgw: bool = False,
-        none_slice_on_error: bool | None = None,
+        # none_slice_on_error: bool | None = None,
+        none_slice_on_error: bool = True,
+        pop_none_slices: bool = True,
         skim_levels: list[str] | None = None,
         skip_props: list[str] | None = None,
     ) -> JDFTXOutfile:
@@ -732,8 +735,7 @@ class JDFTXOutfile:
                 parser to be stricter with certain criteria.
             none_slice_on_error (bool | None): If True, will return None if an error occurs while parsing a slice
                 instead of halting the parsing process. This can be useful for parsing files with multiple slices where
-                some slices may be incomplete or corrupted. If False, all slices may raise errors. If None, only the
-                final slice can raise an error upon parsing (default behavior)
+                some slices may be incomplete or corrupted. If False, all slices may raise errors.
             skim_levels (list[str] | None): A list of depth levels to "skim". This will parse the "slices" in reverse
                 order at the specified depth levels, and stop at the first successful parse. This is useful for quickly
                 parsing large out files where only the most recent data at certain depth levels is desired. Options are
@@ -753,19 +755,23 @@ class JDFTXOutfile:
         Returns:
             JDFTXOutfile: The JDFTXOutfile object.
         """
+        _skim_levels: list[str] = list(skim_levels).copy() if skim_levels is not None else []
+        _skip_props: list[str] = list(skip_props).copy() if skip_props is not None else []
         _valid_skim_options = ["outfile", "geom", "elec"]
-        if skim_levels is not None:
-            for level in skim_levels:
-                if level not in _valid_skim_options:
-                    raise ValueError(f"Invalid skim level: {level}. Valid options are: {_valid_skim_options}")
+        if any(level not in _valid_skim_options for level in _skim_levels):
+            raise ValueError(f"Invalid skim level(s) found in {skim_levels}. Valid options are: {_valid_skim_options}")
         texts = read_outfile_slices(str(file_path))
 
-        if skim_levels is not None and "outfile" in skim_levels:
+        if _skim_levels is not None and "outfile" in _skim_levels:
             slices = []
             oslice = None
             for text in texts[::-1]:
                 oslice = JDFTXOutfileSlice._from_out_slice(
-                    text, is_bgw=is_bgw, none_on_error=True, skim_levels=skim_levels, skip_props=skip_props
+                    text,
+                    is_bgw=is_bgw,
+                    none_on_error=none_slice_on_error,
+                    skim_levels=_skim_levels,
+                    skip_props=_skip_props,
                 )
                 if oslice is not None:
                     slices.append(oslice)
@@ -773,17 +779,20 @@ class JDFTXOutfile:
             if oslice is None:
                 raise RuntimeError("No valid JDFTx out file slices found.")
             return cls(slices=slices, skim_levels=skim_levels)
-        if none_slice_on_error is None:
-            none_slice_bools = [i != len(texts) - 1 for i in range(len(texts))]
-        else:
-            none_slice_bools = [none_slice_on_error for i in range(len(texts))]
+        # if none_slice_on_error is None:
+        #     none_slice_bools = [i != len(texts) - 1 for i in range(len(texts))]
+        # else:
+        #     none_slice_bools = [none_slice_on_error for i in range(len(texts))]
         slices = [
             JDFTXOutfileSlice._from_out_slice(
-                text, is_bgw=is_bgw, none_on_error=none_slice_bools[i], skim_levels=skim_levels, skip_props=skip_props
+                text, is_bgw=is_bgw, none_on_error=none_slice_on_error, skim_levels=_skim_levels, skip_props=_skip_props
             )
-            for i, text in enumerate(texts)
+            # for i, text in enumerate(texts)
+            for text in texts
         ]
-        return cls(slices=slices)
+        if pop_none_slices:
+            slices = [s for s in slices if s is not None]
+        return cls(slices=slices, skim_levels=skim_levels)
 
     # TODO: Write testing for this function
     def to_jdftxinfile(self) -> JDFTXInfile:
@@ -805,7 +814,13 @@ class JDFTXOutfile:
         if last_slice is not None:
             for var in _jof_atr_from_last_slice:
                 setattr(self, var, getattr(last_slice, var))
-            self.trajectory = self._get_trajectory()
+
+    @property
+    def trajectory(self) -> Trajectory | None:
+        """Return the trajectory attribute of the JDFTXOutfile object."""
+        if self._trajectory is None:
+            self._trajectory = self._get_trajectory()
+        return self._trajectory
 
     def _get_trajectory(self) -> Trajectory | None:
         """Set the trajectory attribute of the JDFTXOutfile object."""

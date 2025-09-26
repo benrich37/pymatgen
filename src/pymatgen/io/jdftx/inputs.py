@@ -21,7 +21,14 @@ from monty.json import MSONable
 from pymatgen.core import Lattice, Structure
 from pymatgen.core.periodic_table import Element
 from pymatgen.core.units import bohr_to_ang
-from pymatgen.io.jdftx.generic_tags import AbstractTag, BoolTagContainer, DumpTagContainer, MultiformatTag, TagContainer
+from pymatgen.io.jdftx.generic_tags import (
+    AbstractTag,
+    BoolTagContainer,
+    DumpTagContainer,
+    FloatTag,
+    MultiformatTag,
+    TagContainer,
+)
 from pymatgen.io.jdftx.jdftxinfile_default_inputs import default_inputs
 from pymatgen.io.jdftx.jdftxinfile_master_format import (
     __PHONON_TAGS__,
@@ -45,14 +52,15 @@ if TYPE_CHECKING:
 
 __author__ = "Jacob Clary, Ben Rich"
 
+
 # TODO: Add check for whether all ions have or lack velocities.
 # TODO: Add default value filling like JDFTx does.
 # TODO: Add more robust checking for if two repeatable tag values represent the
 # same information. This is likely fixed by implementing filling of default values.
 # TODO: Incorporate something to collapse repeated dump tags of the same frequency
 # into a single value.
-
-
+# TODO: Add a method to strip all tags that contain their default values for simpler
+# files written (especially when a `JDFTXInfile` is created from `JDFTXOutfileSlice`)
 class JDFTXInfile(dict, MSONable):
     """Class for reading/writing JDFtx input files.
 
@@ -270,6 +278,32 @@ class JDFTXInfile(dict, MSONable):
         jstr = jdftxstructure.get_str()
         return cls.from_str(jstr)
 
+    def read_line(
+        self,
+        line: str,
+        validate_value_boundaries: bool = True,
+        autofix: bool = True,
+        overwrite_nonrepeatable: bool = True,
+    ) -> None:
+        """Read a single line and update the JDFTXInfile object.
+
+        Convenience method for reading a single line and updating the JDFTXInfile object.
+
+        Args:
+            line (str): Line to read.
+        """
+        line = line.strip()
+        tag_object, tag, value = self._preprocess_line(line)
+        if not tag_object.can_repeat and overwrite_nonrepeatable and tag in self:
+            del self[tag]
+        processed_value = tag_object.read(tag, value)
+        _params = self.as_dict(skip_module_keys=True)
+        _params = self._store_value(_params, tag_object, tag, processed_value)
+        self.update(_params)
+        self.validate_tags(try_auto_type_fix=autofix, error_on_failed_fix=True)
+        if validate_value_boundaries:
+            self.validate_boundaries()
+
     @classmethod
     def from_str(
         cls,
@@ -397,7 +431,9 @@ class JDFTXInfile(dict, MSONable):
         Returns:
             JDFTXInfile: Copy of the JDFTXInfile object.
         """
-        return type(self)(self)
+        # Wasn't working before
+        # return type(self)(self)
+        return self.from_dict(self.as_dict(skip_module_keys=True), validate_value_boundaries=False)
 
     def get_text_list(self) -> list[str]:
         """Get a list of strings representation of the JDFTXInfile.
@@ -426,14 +462,24 @@ class JDFTXInfile(dict, MSONable):
                 text.append("")
         return text
 
-    def write_file(self, filename: PathLike) -> None:
+    # TODO: JDFTXInfile can accept nan for values, as this is occasionally what is stored
+    # for unused variables, but JDFTx has no way read nan for an input value. All subtags
+    # with nan values should be removed before writing to file.
+    # TODO: Detect for and warn for tags that can be used together but likely shouldn't be,
+    # ie (ion-width being 0 while fluid is not None)
+    def write_file(self, filename: PathLike, strip_nan: bool = False) -> None:
         """Write JDFTXInfile to an in file.
 
         Args:
             filename (PathLike): Filename to write to.
+            strip_nan (bool, optional): Whether to strip all subtags with nan values before writing.
+                                         Defaults to False. WARNING - VERY JANKY RIGHT NOW
         """
+        write_infile = self
+        if strip_nan:
+            write_infile = clean_infile_of_nans(self)
         with open(filename, mode="w") as file:
-            file.write(str(self))
+            file.write(str(write_infile))
 
     @classmethod
     def to_jdftxstructure(
@@ -910,6 +956,107 @@ def movescale_array_to_selective_dynamics_site_prop(movescale: ArrayLike[int | f
         bool_v = bool(scale)
         selective_dynamics.append([bool_v, bool_v, bool_v])
     return selective_dynamics
+
+
+# def _strip_nans(infile: JDFTXInfile) -> JDFTXInfile:
+#     for k, v in infile.items():
+#         tag_object = get_tag_object_on_val(k, v)
+#         if isinstance(v, dict):
+#             infile[k] = _strip_nans(v)
+#         if isinstance(v, float) and np.isnan(v):
+#             infile[k] = None
+#         elif isinstance(v, list):
+#             infile[k] = [x for x in v if not (isinstance(x, float) and np.isnan(x))]
+#         elif isinstance(v, dict):
+#             infile[k] = _strip_nans(v)
+
+# def _has_nans(value: float | list) -> bool:
+#     if isinstance(value, float) and np.isnan(value):
+#         return True
+#     elif isinstance(value, list):
+#         return any(_has_nans(x) for x in value)
+#     return False
+
+
+def _isnan(x):
+    try:
+        return np.isnan(x)
+    except TypeError:
+        return False
+
+
+def _check_tagcontainer_for_nan(tag_container: TagContainer, val_dict: dict):
+    hasnans = []
+    for kk, vv in val_dict.items():
+        tag = tag_container.subtags[kk]
+        if not isinstance(tag, TagContainer):
+            if _isnan(vv):
+                print(f"Tag {kk} has nan value")
+                hasnans.append(kk)
+        elif not tag.can_repeat:
+            _hasnans = _check_tagcontainer_for_nan(tag, vv)
+            if len(_hasnans) > 0:
+                hasnans.append({kk: _hasnans})
+    return hasnans
+
+
+def has_nan_in_required_subtag(tag_container: TagContainer, val_dict: dict):
+    for kk, vv in val_dict.items():
+        tag = tag_container.subtags[kk]
+        if not isinstance(tag, TagContainer):
+            if _isnan(vv) and not tag.optional:
+                return True
+        elif not tag.can_repeat and has_nan_in_required_subtag(tag, vv):
+            return True
+    return False
+
+
+def clean_tagcontainer_of_nans(tag_container: TagContainer, val_dict: dict):
+    subtags_to_delete = []
+    for kk, vv in val_dict.items():
+        tag = tag_container.subtags[kk]
+        if not isinstance(tag, TagContainer):
+            if _isnan(vv):
+                print(f"Removing tag {kk} with nan value")
+                subtags_to_delete.append(kk)
+        elif not tag.can_repeat:
+            if has_nan_in_required_subtag(tag, vv) and tag_container.optional:
+                subtags_to_delete.append(kk)
+            else:
+                clean_tagcontainer_of_nans(tag, vv)
+                if len(tag.subtags) == 0:
+                    print(f"Removing empty tag container {kk}")
+                    subtags_to_delete.append(kk)
+            clean_tagcontainer_of_nans(tag, vv)
+    for kk in subtags_to_delete:
+        val_dict.pop(kk)
+
+
+def clean_infile_of_nans(infile: JDFTXInfile) -> JDFTXInfile:
+    hasnans = []
+    for k, v in infile.items():
+        tag = get_tag_object_on_val(k, v)
+        if isinstance(tag, FloatTag) and _isnan(v):
+            print(f"Tag {k} has nan value")
+        elif isinstance(tag, TagContainer) and not tag.can_repeat:
+            _hasnans = _check_tagcontainer_for_nan(tag, v)
+            if len(_hasnans) > 0:
+                hasnans.append({k: _hasnans})
+    infile_cleaned = JDFTXInfile.from_dict(infile.as_dict())
+
+    # infile_cleaned = JDFTXInfile(infile)
+
+    for h in hasnans:
+        if isinstance(h, str):
+            infile_cleaned.pop(h)
+        elif isinstance(h, dict):
+            for _h in h:
+                tag = get_tag_object_on_val(_h, infile_cleaned[_h])
+                if _isnan(infile_cleaned[_h]):
+                    infile_cleaned.pop(_h)
+                else:
+                    clean_tagcontainer_of_nans(tag, infile_cleaned[_h])
+    return infile_cleaned
 
 
 @dataclass

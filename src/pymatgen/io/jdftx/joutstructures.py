@@ -154,6 +154,8 @@ class JOutStructures:
     def _from_out_slice(
         cls,
         out_slice: list[str],
+        # skim_levels: list[str],
+        # skip_props: list[str] | None = None,
         opt_type: str = "IonicMinimize",
         init_struc: Structure | None = None,
         is_md: bool = False,
@@ -430,7 +432,15 @@ def _get_joutstructure_list(
         # If this is changed to always be the first structure, logic down the line on what is considered
         # a "single point" calculation will be broken.
         joutstructure_list.append(
-            JOutStructure._from_text_slice([], init_structure=init_structure, opt_type=opt_type, is_md=is_md)
+            JOutStructure._from_text_slice(
+                [],
+                init_structure=init_structure,
+                opt_type=opt_type,
+                is_md=is_md,
+                expected_etype=expected_etype,
+                skim_levels=skim_levels,
+                skip_props=skip_props,
+            )
         )
     if skim_levels is not None and "geom" in skim_levels:
         for bounds in out_bounds[::-1]:
