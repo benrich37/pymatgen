@@ -172,9 +172,11 @@ def test_JDFTXInfile_expected_exceptions():
     with pytest.raises(ValueError, match=re.escape(err_str)):
         # Implicitly tests validate_tags
         jif[tag] = value
+    # `copy` will end up trying to validate the tags, so we need to remove the offending tag first
+    jif.pop(tag)
+    jif2 = jif.copy()
     # Setting tags with unfixable values through "update" side-steps the error, but will raise it once
     # "validate_tags" is inevitably called
-    jif2 = jif.copy()
     jif2.update({tag: value})
     with pytest.raises(ValueError, match=re.escape(err_str)):
         jif2.validate_tags(try_auto_type_fix=True)

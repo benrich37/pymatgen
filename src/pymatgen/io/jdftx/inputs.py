@@ -433,7 +433,7 @@ class JDFTXInfile(dict, MSONable):
         """
         # Wasn't working before
         # return type(self)(self)
-        return self.from_dict(self.as_dict(skip_module_keys=True))
+        return self.from_dict(self.as_dict(skip_module_keys=True), validate_value_boundaries=False)
 
     def get_text_list(self) -> list[str]:
         """Get a list of strings representation of the JDFTXInfile.
