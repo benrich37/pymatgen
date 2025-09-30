@@ -9,7 +9,12 @@ import pytest
 
 from pymatgen.core.structure import Site, Structure
 from pymatgen.core.units import bohr_to_ang
-from pymatgen.io.jdftx.inputs import JDFTXInfile, JDFTXStructure, selective_dynamics_site_prop_to_jdftx_interpretable
+from pymatgen.io.jdftx.inputs import (
+    JDFTXInfile,
+    JDFTXStructure,
+    clean_infile_of_nans,
+    selective_dynamics_site_prop_to_jdftx_interpretable,
+)
 from pymatgen.io.jdftx.jdftxinfile_default_inputs import antoinePvap, default_inputs
 from pymatgen.io.jdftx.jdftxinfile_master_format import get_tag_object
 
@@ -615,3 +620,21 @@ def test_jdftxinfile_comparison():
 
 def test_antoine_pvap():
     assert_same_value(antoinePvap(298, 7.31549, 1794.88, -34.764), 1.06736e-10)
+
+
+def test_nan_stripping():
+    jif = JDFTXInfile.from_file(ex_infile1_fname)
+    # Single optional subtag being nan should only remove that subtag
+    jif["elec-cutoff"]["EcutRho"] = np.nan
+    jif = clean_infile_of_nans(jif)
+    assert "EcutRho" not in jif["elec-cutoff"]
+    # Single required subtag being nan should remove the whole tag
+    jif["latt-move-scale"]["s0"] = np.nan
+    jif = clean_infile_of_nans(jif)
+    assert "latt-move-scale" not in jif
+    jif.pop("fluid-solvent")
+    jif.read_line("fluid-solvent H2O 55.338 ScalarEOS epsBulk nan")
+    assert "epsBulk" in jif["fluid-solvent"][0]
+    jif = clean_infile_of_nans(jif)
+    assert "epsBulk" not in jif["fluid-solvent"][0]
+    print(jif)
