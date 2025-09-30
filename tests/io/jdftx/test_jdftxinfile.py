@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 
 from pymatgen.core.structure import Site, Structure
+from pymatgen.core.units import bohr_to_ang
 from pymatgen.io.jdftx.inputs import JDFTXInfile, JDFTXStructure, selective_dynamics_site_prop_to_jdftx_interpretable
 from pymatgen.io.jdftx.jdftxinfile_default_inputs import antoinePvap, default_inputs
 from pymatgen.io.jdftx.jdftxinfile_master_format import get_tag_object
@@ -571,6 +572,7 @@ def test_lattice_writing(value_str: str):
 )
 def test_jdftxstructure_lattice_conversion(value_str: str):
     test_vars = ["a", "b", "c", "alpha", "beta", "gamma"]
+    conv_vars = ["a", "b", "c"]
     mft_lattice_tag = get_tag_object("lattice")
     assert mft_lattice_tag is not None
     i = mft_lattice_tag.get_format_index_for_str_value("lattice", value_str)
@@ -584,7 +586,10 @@ def test_jdftxstructure_lattice_conversion(value_str: str):
         structure = infile.to_pmg_structure(infile)
         for var in test_vars:
             if var in parsed_tag:
-                assert_same_value(float(getattr(structure.lattice, var)), float(parsed_tag[var]))
+                should_be = parsed_tag[var]
+                if var in conv_vars:
+                    should_be *= bohr_to_ang
+                assert_same_value(float(getattr(structure.lattice, var)), float(should_be))
 
 
 def test_jdftxinfile_comparison():
