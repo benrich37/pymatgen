@@ -1470,7 +1470,10 @@ def _infile_to_pmg_lattice(jdftxinfile: JDFTXInfile) -> Lattice:
 
 
 def _infile_special_format_to_pmg_lattice(jdftxinfile: JDFTXInfile) -> Lattice:
-    jl = jdftxinfile["lattice"]
+    jl = jdftxinfile["lattice"].copy()
+    for key in ["a", "b", "c"]:
+        if key in jl and isinstance(jl[key], float):
+            jl[key] *= bohr_to_ang
     if "modification" in jl:
         raise NotImplementedError("Special case lattices with modification not implemented yet")
     # Second boolean to check if latt-scale was passed but does nothing
