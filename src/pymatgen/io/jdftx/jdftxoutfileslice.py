@@ -915,6 +915,7 @@ class JDFTXOutfileSlice:
             opt_type=self.geom_opt_label,
             init_struc=self.initial_structure,
             is_md=self.is_md,
+            has_igp="ionic-gaussian-potential" in self.infile,
             expected_etype=expected_etype,
             skim_levels=skim_levels,
             skip_props=skip_props,
