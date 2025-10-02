@@ -769,7 +769,7 @@ class JOutStructure(Structure):
                 _forces.append(force)
             forces = np.array(_forces)
             if coords_type.lower() != "cartesian":
-                forces = np.dot(forces, self.lattice.matrix)
+                forces = np.dot(forces, np.linalg.inv(self.lattice.matrix))
             else:
                 forces *= 1 / bohr_to_ang  # Convert from Ha/Bohr to Ha/Ang
             forces *= Ha_to_eV
