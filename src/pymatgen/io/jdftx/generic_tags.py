@@ -431,7 +431,9 @@ class StrTag(AbstractTag):
             str: The parsed string value.
         """
         self._single_value_read_validate(tag, value)
-        if self.options is None or value in self.options:
+        compare_value = value.strip().lower()
+        compare_options = [x.strip().lower() for x in self.options] if self.options is not None else None
+        if compare_options is None or compare_value in compare_options:
             return value
         raise ValueError(f"The string value '{value}' must be one of {self.options} for tag '{tag}'")
 

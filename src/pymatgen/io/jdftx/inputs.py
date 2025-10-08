@@ -328,17 +328,23 @@ class JDFTXInfile(dict, MSONable):
             tag_object, tag, value = cls._preprocess_line(line)
             processed_value = tag_object.read(tag, value)
             params = cls._store_value(params, tag_object, tag, processed_value)  # this will change with tag categories
-
+        pop_idcs = []
         if "include" in params:
-            for filename in params["include"]:
+            for i, filename in enumerate(params["include"]):
                 _filename = filename
                 if not Path(_filename).exists():
                     if path_parent is not None:
                         _filename = path_parent / filename
                     if not Path(_filename).exists():
-                        raise ValueError(f"The include file {filename} ({_filename}) does not exist!")
-                params.update(cls.from_file(_filename, dont_require_structure=True, assign_path_parent=False))
-            del params["include"]
+                        warnings.warn(f"The include file {filename} ({_filename}) does not exist!", stacklevel=2)
+                        # raise ValueError(f"The include file {filename} ({_filename}) does not exist!")
+                if Path(_filename).exists():
+                    params.update(cls.from_file(_filename, dont_require_structure=True, assign_path_parent=False))
+                    pop_idcs.append(i)
+            for i in reversed(pop_idcs):
+                del params["include"][i]
+            if len(params["include"]) == 0:
+                del params["include"]
 
         if (
             not dont_require_structure
