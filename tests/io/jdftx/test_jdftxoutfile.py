@@ -18,7 +18,11 @@ from .outputs_test_utils import (
     etot_etype_outfile_known_simple,
     etot_etype_outfile_path,
     example_aimd_outfile_known,
+    example_aimd_outfile_known_site_properties,
     example_aimd_outfile_path,
+    example_igp_aimd_outfile_known,
+    example_igp_aimd_outfile_known_site_properties,
+    example_igp_aimd_outfile_path,
     example_ionmin_outfile_known,
     example_ionmin_outfile_known_simple,
     example_ionmin_outfile_path,
@@ -219,12 +223,13 @@ def test_vib_parse(
 
 
 @pytest.mark.parametrize(
-    ("aimd_outfile_path", "aimd_outfile_known"),
+    ("aimd_outfile_path", "aimd_outfile_known", "aimd_outfile_known_site_properties"),
     [
-        (example_aimd_outfile_path, example_aimd_outfile_known),
+        (example_aimd_outfile_path, example_aimd_outfile_known, example_aimd_outfile_known_site_properties),
+        (example_igp_aimd_outfile_path, example_igp_aimd_outfile_known, example_igp_aimd_outfile_known_site_properties),
     ],
 )
-def test_aimd_parse(aimd_outfile_path: Path, aimd_outfile_known: dict):
+def test_aimd_parse(aimd_outfile_path: Path, aimd_outfile_known: dict, aimd_outfile_known_site_properties: dict):
     """
     Test that the AIMD properties are parsed correctly from the outfile.
     """
@@ -237,6 +242,9 @@ def test_aimd_parse(aimd_outfile_path: Path, aimd_outfile_known: dict):
         assert_same_value(getattr(jdftxoutfile.slices[-1], key), val)
         assert hasattr(jdftxoutfile, key)
         assert_same_value(getattr(jdftxoutfile, key), val)
+    for sp, val in aimd_outfile_known_site_properties.items():
+        assert sp in jdftxoutfile.structure.site_properties
+        assert_same_value(jdftxoutfile.structure.site_properties[sp], val)
 
 
 @pytest.mark.parametrize(

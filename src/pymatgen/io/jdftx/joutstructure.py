@@ -319,6 +319,7 @@ class JOutStructure(Structure):
         opt_type: str | None = "IonicMinimize",
         init_structure: Structure | None = None,
         is_md: bool = False,
+        has_igp: bool = False,
         expected_etype: str | None = None,
         skim_levels: list[str] | None = None,
         skip_props: list[str] | None = None,
@@ -336,6 +337,10 @@ class JOutStructure(Structure):
             opt_type (str): The type of optimization step.
             init_structure (Structure | None): The initial structure of the system.
             is_md (bool): Whether the optimization step is a molecular dynamics step.
+            has_igp (bool): Whether a ionic gaussian potential(s) are present.
+            expected_etype (str | None): The expected type of energy from the electronic minimization data.
+            skim_levels (list[str] | None): The levels of electronic minimization data to skim.
+            skip_props (list[str] | None): The properties to skip parsing. Options are "struct", "forces", and
 
         Returns:
             JOutStructure: The created JOutStructure object.
@@ -361,6 +366,10 @@ class JOutStructure(Structure):
         if is_md:
             instance.is_md = True
             _line_types.append("thermostat-velocity")
+        # Since igp forces share the same header as normal forces and are printed before,
+        # the igp forces line type must be inserted before the forces line type
+        if has_igp:
+            _line_types.insert(_line_types.index("forces") - 1, "igp_forces")
         if expected_etype is not None:
             instance.etype = expected_etype
         # Remove line types that are being skipped anyways to speed up `_gather_line_collections`
@@ -388,6 +397,8 @@ class JOutStructure(Structure):
             cur_species = instance._parse_posns_lines(line_collections["posns"]["lines"], cur_species)
         if "forces" not in skip_props:
             instance._parse_forces_lines(line_collections["forces"]["lines"])
+        if has_igp:
+            instance._parse_forces_lines(line_collections["igp_forces"]["lines"], forces_name="igp_forces")
         if "lowdin" not in skip_props:
             instance._parse_lowdin_lines(line_collections["lowdin"]["lines"], cur_species)
         # Can be parsed at any point
@@ -395,8 +406,8 @@ class JOutStructure(Structure):
         instance._parse_stress_lines(line_collections["stress"]["lines"])
         instance._parse_kinetic_stress_lines(line_collections["kinetic_stress"]["lines"])
         if instance.is_md:
-            if "struct" not in skip_props:
-                line_collections["thermostat-velocity"] = {"lines": line_collections["posns"]["lines"][-1:]}
+            # if "struct" not in skip_props:
+            #     line_collections["thermostat-velocity"] = {"lines": line_collections["posns"]["lines"][-1:]}
             instance._parse_thermostat_line(line_collections["thermostat-velocity"]["lines"])
         # In case of single-point calculation
         instance._init_e_sp_backup()
@@ -465,11 +476,12 @@ class JOutStructure(Structure):
             text_slice (list[str]): A slice of text from a JDFTx out file corresponding to a single
             optimization step / SCF cycle.
         """
-        for line in text_slice:
+        for i, line in enumerate(text_slice):
             read_line = False
             for sdict in line_collections.values():
                 if sdict["collecting"]:
-                    lines, getting, got = self._collect_generic_line(line, sdict["lines"])
+                    next_line = text_slice[min(i + 1, len(text_slice) - 1)]
+                    lines, getting, got = self._collect_generic_line(line, sdict["lines"], next_line, line_collections)
                     sdict["lines"] = lines
                     sdict["collecting"] = getting
                     sdict["collected"] = got
@@ -740,7 +752,7 @@ class JOutStructure(Structure):
             new_species = [Element(name) for name in names]
         return new_species if new_species is not None else cur_species
 
-    def _parse_forces_lines(self, forces_lines: list[str]) -> None:
+    def _parse_forces_lines(self, forces_lines: list[str], forces_name="forces") -> None:
         """Parse forces lines.
 
         Args:
@@ -759,10 +771,11 @@ class JOutStructure(Structure):
             if coords_type.lower() != "cartesian":
                 forces = np.dot(forces, np.linalg.inv(self.lattice.matrix))
             else:
-                forces *= 1 / bohr_to_ang
+                forces *= 1 / bohr_to_ang  # Convert from Ha/Bohr to Ha/Ang
             forces *= Ha_to_eV
-            self.forces = forces
-            self.add_site_property("forces", list(forces))
+            setattr(self, forces_name, forces)
+            # self.forces = forces
+            self.add_site_property(forces_name, list(forces))
 
     def _parse_ecomp_lines(self, ecomp_lines: list[str]) -> None:
         """Parse energy component lines.
@@ -933,7 +946,9 @@ class JOutStructure(Structure):
             return self._is_opt_start_line(line_text)
         raise ValueError(f"Unrecognized line type {line_type}")
 
-    def _collect_generic_line(self, line_text: str, generic_lines: list[str]) -> tuple[list[str], bool, bool]:
+    def _collect_generic_line(
+        self, line_text: str, generic_lines: list[str], next_line: str | None, line_collections
+    ) -> tuple[list[str], bool, bool]:
         """Collect generic log line.
 
         Collect a line of text into a list of lines if the line is not empty,
@@ -954,6 +969,12 @@ class JOutStructure(Structure):
         if not len(line_text.strip()):
             collecting = False
             collected = True
+        elif next_line is not None and (
+            True in [self._is_generic_start_line(next_line, line_type) for line_type in line_collections]
+        ):
+            collecting = False
+            collected = True
+            generic_lines.append(line_text)
         else:
             generic_lines.append(line_text)
         return generic_lines, collecting, collected
@@ -1100,6 +1121,7 @@ line_types = [
     "kinetic_stress",
     "stress",
     "posns",
+    # "igp_forces",
     "forces",
     "ecomp",
     "lowdin",
@@ -1112,6 +1134,7 @@ line_type_map = {
     "lowdin": "#--- Lowdin population analysis ---",
     # "opt": f"{self.opt_type}:",
     "ecomp": "# Energy components",
+    "igp_forces": "# Forces in",
     "forces": "# Forces in",
     "posns": "# Ionic positions",
     "stress": "# Stress tensor in",
