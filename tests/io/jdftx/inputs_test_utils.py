@@ -47,7 +47,7 @@ ex_infile1_knowns = {
     "elec-ex-corr": "gga",
     "van-der-waals": "D3",
     "elec-cutoff": {"Ecut": 20.0, "EcutRho": 100.0},
-    "elec-n-bands": 15,
+    "elec-n-bands": {"n": 15},
     "kpoint-folding": {"n0": 1, "n1": 1, "n2": 1},
     "spintype": "z-spin",
     "core-overlap-check": "none",

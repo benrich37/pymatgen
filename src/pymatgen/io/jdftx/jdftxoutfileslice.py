@@ -20,6 +20,8 @@ if TYPE_CHECKING:
 
     from pymatgen.io.jdftx.jelstep import JElSteps
     from pymatgen.io.jdftx.jminsettings import JMinSettings
+from scipy.constants import speed_of_light as c
+
 from pymatgen.core import Structure
 from pymatgen.core.periodic_table import Element
 from pymatgen.core.trajectory import Trajectory
@@ -1265,6 +1267,7 @@ class JDFTXOutfileSlice:
                 _displacements.append(np.array([float(x) for x in line.split()[2:5]]))
             vib_mode_data["Displacements"] = np.array(_displacements) * bohr_to_ang  # Length of displacement
             # specified in inputs
+        vib_mode_data["cm^-1"] = vib_mode_data["Frequency"] / (Ha_to_eV * (c * 100))
         return vib_mode_data
 
     def to_jdftxinfile(self) -> JDFTXInfile:
