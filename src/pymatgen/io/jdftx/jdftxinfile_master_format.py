@@ -497,7 +497,13 @@ MASTER_TAG_LIST: dict[str, dict[str, Any]] = {
                 "smearingWidth": FloatTag(write_tagname=False, optional=False),
             },
         ),
-        "elec-n-bands": IntTag(),
+        # "elec-n-bands": IntTag(),
+        "elec-n-bands": TagContainer(
+            subtags={
+                "n": IntTag(write_tagname=False, optional=False, lb=0, lb_incl=False),
+                "multiplier": FloatTag(write_tagname=True, optional=True, lb=1.0, lb_incl=True),
+            }
+        ),
         "spintype": StrTag(options=["no-spin", "spin-orbit", "vector-spin", "z-spin"]),
         "initial-magnetic-moments": InitMagMomTag(),
         "elec-initial-magnetization": TagContainer(
