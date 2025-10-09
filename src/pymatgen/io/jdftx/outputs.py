@@ -907,7 +907,7 @@ def _find_jdftx_out_file(calc_dir: Path) -> Path:
     """
     out_files = _find_jdftx_dump_file(calc_dir, "out")
     if len(out_files) > 1:
-        raise FileNotFoundError("Multiple JDFTx out files found in directory.")
+        raise FileNotFoundError(f"Multiple JDFTx out files found in directory {calc_dir}.")
     return out_files[0]
 
 
@@ -924,7 +924,7 @@ def _find_jdftx_dump_file(calc_dir: Path, dump_fname: str) -> list[Path]:
     dump_files = list(calc_dir.glob(f"*.{dump_fname}")) + list(calc_dir.glob(f"{dump_fname}"))
     dump_files = [f for f in dump_files if f.is_file()]
     if len(dump_files) == 0:
-        raise FileNotFoundError(f"No JDFTx {dump_fname} file found in directory.")
+        raise FileNotFoundError(f"No JDFTx {dump_fname} file found in directory {calc_dir}.")
     return dump_files
 
 
