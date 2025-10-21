@@ -46,7 +46,7 @@ def test_jdftxinfile_structuregen():
     ("infile_fname", "bool_func"),
     [
         (ex_infile1_fname, lambda jif: all(jif["kpoint-folding"][x] == 1 for x in jif["kpoint-folding"])),
-        (ex_infile1_fname, lambda jif: jif["elec-n-bands"] == 15),
+        (ex_infile1_fname, lambda jif: jif["elec-n-bands"]["n"] == 15),
     ],
 )
 def test_JDFTXInfile_known_lambda(infile_fname: str, bool_func: Callable[[JDFTXInfile], bool]):
@@ -153,18 +153,18 @@ def test_JDFTXInfile_expected_exceptions():
     "something is wrong with this input data!"
     with pytest.raises(ValueError, match=re.escape(err_str)):
         jif._preprocess_line("barbie ken allan")
-    # include tags raise value-errors if the file cannot be found
+    # include tags raise warnings if the file cannot be found
     _filename = "barbie"
     err_str = f"The include file {_filename} ({_filename}) does not exist!"
-    with pytest.raises(ValueError, match=re.escape(err_str)):
-        JDFTXInfile.from_str(f"include {_filename}\n")
+    with pytest.warns(UserWarning, match=re.escape(err_str)):
+        JDFTXInfile.from_str(f"include {_filename}\n", dont_require_structure=True)
     # If it does exist, no error should be raised
     filename = ex_in_files_dir / "barbie"
     err_str = f"The include file {_filename} ({filename}) does not exist!"
-    str(err_str)
+    # str(err_str) # What does this do?
     # If the wrong parent_path is given for a file that does exist, error
-    with pytest.raises(ValueError, match=re.escape(err_str)):
-        JDFTXInfile.from_str(f"include {_filename}\n", path_parent=ex_in_files_dir)
+    with pytest.warns(UserWarning, match=re.escape(err_str)):
+        JDFTXInfile.from_str(f"include {_filename}\n", path_parent=ex_in_files_dir, dont_require_structure=True)
     # JDFTXInfile cannot be constructed without lattice and ion tags
     with pytest.raises(ValueError, match="This input file is missing required structure tags"):
         JDFTXInfile.from_str("dump End DOS\n")
