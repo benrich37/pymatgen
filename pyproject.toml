@@ -91,7 +91,10 @@ Pypi = "https://pypi.org/project/pymatgen"
 [project.optional-dependencies]
 abinit = ["netcdf4>=1.7.2"]
 ase = ["ase>=3.23.0"]
-electronic_structure = ["fdint>=2.0.2"]
+# TODO: `fdint` seems not maintained anymore and cannot be installed
+# with `uv` on Python 3.10 as build-time dependency was not declared
+# https://github.com/scott-maddox/fdint/issues/21
+# electronic_structure = ["fdint>=2.0.2"]
 matcalc = [
     "matcalc>=0.4.0; python_version<'3.13'",
     "matgl>=1.2.7; python_version<'3.13'",
@@ -163,7 +166,7 @@ include = ["pymatgen", "pymatgen.*"]
 
 [tool.pdm.dev-dependencies]
 lint = ["mypy>=1.10.0", "pre-commit>=3.7.1", "ruff>=0.4.9"]
-test = ["pytest-cov>=5.0.0", "pytest-split>=0.9.0", "pytest>=8.2.2"]
+test = ["pytest-cov>=5.0.0", "pytest-split>=0.9.0", "pytest>=8.2.2","pytest-xdist>=3.0.0"]
 
 [tool.cibuildwheel.linux]
 archs = ["auto64"]
@@ -219,6 +222,7 @@ ignore = [
     "PLW1641", # eq-without-hash TODO: fix this
     "PLW2901", # Outer for loop variable overwritten by inner assignment target
     "PT013", # Incorrect import of pytest
+    "RUF043", # Pattern passed to `match=` contains metacharacters but is neither escaped nor raw
     "S110", # Log for try-except-pass
     "S112", # Log for try-except-continue
     "S311", # Use random module for cryptographic purposes
@@ -254,7 +258,7 @@ docstring-code-format = true
 "dev_scripts/*" = ["D"]
 
 [tool.pytest.ini_options]
-addopts = "--durations=30 --quiet -r xXs --color=yes --import-mode=importlib"
+addopts = "-n auto --durations=30 --quiet -r xXs --color=yes --import-mode=importlib"
 filterwarnings = [
     # NOTE: the LAST matching option would be used
     "ignore::UserWarning", # Ignore UserWarning
@@ -284,6 +288,7 @@ exclude_also = [
 ]
 
 [tool.mypy]
+mypy_path = "src"
 ignore_missing_imports = true
 namespace_packages = true
 no_implicit_optional = false
@@ -306,6 +311,7 @@ ist, nd, ot, ontop, CoO
 skip = """*.json,
 src/pymatgen/analysis/chemenv/coordination_environments/coordination_geometries_files/allcg.txt,
 tests/io/lammps/test_inputs.py,
+dev_scripts/periodic_table_resources/elemental_properties.yaml,
 """
 check-filenames = true
 
@@ -326,12 +332,14 @@ default-groups = ["dev", "test", "lint", "docs"]
 dev = [
     "invoke>=2.2.0",
     "jupyter>=1.1.1",
+    "openai>=2.2.0",
     "pre-commit>=4.2.0",
 ]
 test = [
     "pytest>=8.3.5",
     "pytest-cov>=6.0.0",
-    "pytest-split>=0.10.0"
+    "pytest-split>=0.10.0",
+    "pytest-xdist>=3.0.0"
 ]
 lint = [
     "mypy>=1.15.0",

@@ -174,7 +174,7 @@ def is_lowdin_start_line(line_text: str) -> bool:
 
 # TODO: Figure out if this ever actually gets called, (I think I added it to make JOutStructure user friendly
 # but JOutStructure is not intended to be a user-initialized class)
-def correct_geom_opt_type(opt_type: str | None) -> str | None:
+def correct_geom_opt_type(opt_type: str | None) -> str:
     """Return recognizable opt_type string.
 
     Correct the opt_type string to match the JDFTx convention.
@@ -189,14 +189,15 @@ def correct_geom_opt_type(opt_type: str | None) -> str | None:
     opt_type: str | None
         The corrected type of optimization step
     """
+    opt_type_return = ""
     if opt_type is not None:
         if "lattice" in opt_type.lower():
-            opt_type = "LatticeMinimize"
+            opt_type_return = "LatticeMinimize"
         elif "ionic" in opt_type.lower():
-            opt_type = "IonicDynamics" if "dyn" in opt_type.lower() else "IonicMinimize"
+            opt_type_return = "IonicDynamics" if "dyn" in opt_type.lower() else "IonicMinimize"
         else:
-            opt_type = None
-    return opt_type
+            raise ValueError(f"Unrecognized optimization type: {opt_type}")
+    return opt_type_return
 
 
 def get_start_lines(

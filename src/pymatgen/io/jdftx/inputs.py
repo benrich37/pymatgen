@@ -8,6 +8,7 @@ class is written.
 
 from __future__ import annotations
 
+import logging
 import warnings
 from copy import deepcopy
 from dataclasses import dataclass
@@ -44,6 +45,8 @@ if TYPE_CHECKING:
     from pymatgen.util.typing import PathLike
 
 __author__ = "Jacob Clary, Ben Rich"
+
+logger = logging.getLogger(__name__)
 
 
 # TODO: Add check for whether all ions have or lack velocities.
@@ -243,7 +246,8 @@ class JDFTXInfile(dict, MSONable):
         """
         _structure = structure.copy()
         if ignore_site_properties:
-            _structure.site_properties = {}
+            _structure.clear_site_properties()
+            # _structure.site_properties = {}
         jdftxstructure = JDFTXStructure(
             _structure,
             selective_dynamics=selective_dynamics,
@@ -518,6 +522,10 @@ class JDFTXInfile(dict, MSONable):
         """
         # use dict representation so it's easy to get the right column for
         # moveScale, rather than checking for velocities
+        logger.info(
+            "INPUT DICT REP: %s",
+            jdftxinfile.get_dict_representation(jdftxinfile),
+        )
         jdftxstructure = JDFTXStructure.from_jdftxinfile(
             jdftxinfile.get_dict_representation(jdftxinfile),
             sort_structure=sort_structure,
@@ -582,7 +590,7 @@ class JDFTXInfile(dict, MSONable):
         """
         for tag in self:
             tag_object = get_tag_object(tag)
-            checked_tag, is_tag_valid, value = tag_object.validate_value_type(
+            _checked_tag, is_tag_valid, value = tag_object.validate_value_type(
                 tag, self[tag], try_auto_type_fix=try_auto_type_fix
             )
             should_warn = not is_tag_valid
@@ -1017,12 +1025,15 @@ def apply_popmaps(edit_infile: JDFTXInfile, popmaps: list[list[str | int]]) -> N
     for popmap in popmaps:
         popmap_use = popmap
         popmap_destination = edit_infile
-        to = get_tag_object_on_val(popmap[0], edit_infile[popmap[0]])
+        tag = popmap[0]
+        if not isinstance(tag, str):
+            raise TypeError("First element of popmap must be a tag string here")
+        to = get_tag_object_on_val(tag, edit_infile[tag])
         if isinstance(to, TagContainer):
-            subtag = to
-            popmap_destination = popmap_destination[popmap[0]]
+            subtag: AbstractTag = to
+            popmap_destination = popmap_destination[tag]
             popmap_route = popmap[1:]
-            popmap_use = [popmap[0]]
+            popmap_use = [tag]
             step = None
             for i, step in enumerate(popmap_route):
                 if isinstance(step, str):

@@ -424,6 +424,8 @@ class JOutStructure(Structure):
         """Return structure attribute."""
         if self._structure is None:
             self._init_structure()
+        if self._structure is None:
+            raise ValueError("Structure attribute is not initialized")
         return self._structure
 
     def _init_e_sp_backup(self) -> None:
