@@ -305,7 +305,7 @@ class JDFTXOutputs:
         Returns:
             dict | None:
         """
-        lmax, norbmax = self._get_lmax()
+        _lmax, norbmax = self._get_lmax()
         if norbmax is None:
             return None
         if self.orb_label_list is None:
@@ -763,7 +763,7 @@ class JDFTXOutfile:
         texts = read_outfile_slices(str(file_path))
 
         if _skim_levels is not None and "outfile" in _skim_levels:
-            slices = []
+            slices: list[JDFTXOutfileSlice | None] = []
             oslice = None
             for text in texts[::-1]:
                 oslice = JDFTXOutfileSlice._from_out_slice(
