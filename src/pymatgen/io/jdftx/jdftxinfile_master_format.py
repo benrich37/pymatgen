@@ -475,7 +475,7 @@ MASTER_TAG_LIST: dict[str, dict[str, Any]] = {
         "lj-override": FloatTag(),
         "van-der-waals": MultiformatTag(
             format_options=[
-                StrTag(options=["D3"]),
+                StrTag(options=["D3", "D3BJ"]),
                 FloatTag(),
             ]
         ),
